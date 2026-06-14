@@ -31,7 +31,12 @@ class StorageService {
       ),
     );
 
-    return _supabase.storage.from(_bucket).getPublicUrl(path);
+    final publicUrl = _supabase.storage.from(_bucket).getPublicUrl(path);
+
+    final cacheBustedUrl =
+        '$publicUrl?updatedAt=${DateTime.now().millisecondsSinceEpoch}';
+
+    return cacheBustedUrl;
   }
 
   Future<String> uploadFotoProfil(String uid, File f) =>

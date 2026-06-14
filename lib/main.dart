@@ -72,17 +72,21 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/auth/splash_screen.dart';
 
-const _supabaseUrl     = 'SUPABASE_URL';
-const _supabaseAnonKey = 'SUPABASE_ANON_KEY';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Load file .env (harus ada di root project & terdaftar di pubspec.yaml > assets)
+  await dotenv.load(fileName: '.env');
+
   await Supabase.initialize(
-    url:     _supabaseUrl,
-    anonKey: _supabaseAnonKey,
+    url:     dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+
   runApp(const TutorInApp());
 }
 

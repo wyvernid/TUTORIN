@@ -33,6 +33,12 @@ class _State extends State<StudentProfilScreen> {
       final url = await _storage.uploadFotoProfil(uid, f);
       await _auth.updateProfil(uid, {'fotoUrl': url});
       await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal upload foto: $e')),
+        );
+      }
     } finally { if (mounted) setState(() => _loadingFoto = false); }
   }
 
@@ -84,7 +90,24 @@ class _State extends State<StudentProfilScreen> {
             GestureDetector(onTap: _showFotoOptions, child: Stack(children: [
               _loadingFoto ? const SizedBox(width: 90, height: 90, child: Center(child: CircularProgressIndicator(color: Colors.white)))
                   : Container(width: 90, height: 90, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
-                      child: u.fotoUrl != null ? ClipOval(child: Image.network(u.fotoUrl!, fit: BoxFit.cover))
+                      child: u.fotoUrl != null
+                          ? ClipOval(
+                              child: Image.network(
+                                u.fotoUrl!,
+                                key: ValueKey(u.fotoUrl),
+                                fit: BoxFit.cover,
+                                width: 90,
+                                height: 90,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const CircleAvatar(backgroundColor: Colors.white24, child: Icon(Icons.person_rounded, color: Colors.white, size: 52)),
+                              ),
+                            )
                           : const CircleAvatar(backgroundColor: Colors.white24, child: Icon(Icons.person_rounded, color: Colors.white, size: 52))),
               Positioned(right: 0, bottom: 0, child: Container(width: 28, height: 28, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.edit_rounded, color: Color(0xFF1565C0), size: 15))),
             ])),
