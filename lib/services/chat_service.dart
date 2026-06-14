@@ -4,7 +4,7 @@ import '../models/chat_model.dart';
 class ChatService {
   final _db = FirebaseFirestore.instance;
 
-  String roomId(String a, String b) { final s = [a, b]..sort(); return '\${s[0]}_\${s[1]}'; }
+  String roomId(String a, String b) { final s = [a, b]..sort(); return '${s[0]}_${s[1]}'; }
 
   Future<void> kirimPesan({required String senderUid, required String senderNama,
       required String senderRole, required String receiverUid, required String receiverNama,
@@ -36,5 +36,5 @@ class ChatService {
       .snapshots().map((s) => s.docs.map((d) => ChatRoom.fromMap(d.data(), d.id)).toList());
 
   Future<void> tandaiDibaca(String rId, String uid) async =>
-      _db.collection('chatRooms').doc(rId).update({'unreadCount.\$uid': 0});
+      _db.collection('chatRooms').doc(rId).update({'unreadCount.$uid': 0});
 }

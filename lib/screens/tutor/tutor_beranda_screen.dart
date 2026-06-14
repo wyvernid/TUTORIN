@@ -62,7 +62,7 @@ class _State extends State<TutorBerandaScreen> {
                 const SizedBox(width: 10),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(b.kelasJudul, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text('Murid: \${b.studentNama}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                  Text('Murid: ${b.studentNama}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                 ])),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Text(b.jadwalDipilih, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
@@ -91,7 +91,7 @@ class _State extends State<TutorBerandaScreen> {
     return Padding(padding: const EdgeInsets.fromLTRB(16,14,16,0), child: Row(children: [
       _stat('Rp-', 'Pendapatan Bulan Ini', Icons.account_balance_wallet_rounded, Colors.green),
       const SizedBox(width: 10),
-      _stat('\${u?.totalMurid ?? 0}', 'Murid Aktif', Icons.people_rounded, const Color(0xFF1565C0)),
+      _stat('${u?.totalMurid ?? 0}', 'Murid Aktif', Icons.people_rounded, const Color(0xFF1565C0)),
       const SizedBox(width: 10),
       _stat(u != null && u.rating > 0 ? u.rating.toStringAsFixed(1) : '-', 'Rating', Icons.star_rounded, Colors.amber),
     ]));
@@ -118,10 +118,10 @@ class _PayCard extends StatelessWidget {
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(booking.studentNama, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
           Text(booking.kelasJudul, style: TextStyle(fontSize: 11, color: Colors.grey[600]), maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text('\${booking.jadwalDipilih} · \${booking.jamDipilih}', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+          Text('${booking.jadwalDipilih} · ${booking.jamDipilih}', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('Rp\${(booking.nominal/1000).toStringAsFixed(0)}.000', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1565C0))),
+          Text('Rp${(booking.nominal/1000).toStringAsFixed(0)}.000', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1565C0))),
           const SizedBox(height: 4),
           Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(20)),
             child: const Text('Verifikasi', style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.w700))),

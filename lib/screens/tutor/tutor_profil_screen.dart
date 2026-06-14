@@ -63,7 +63,7 @@ class _State extends State<TutorProfilScreen> {
             ]),
           ])),
         Padding(padding: const EdgeInsets.fromLTRB(16,14,16,0), child: Row(children: [
-          _stat('\${u.totalMurid}', 'Murid', Icons.people_rounded, const Color(0xFF1565C0)),
+          _stat('${u.totalMurid}', 'Murid', Icons.people_rounded, const Color(0xFF1565C0)),
           const SizedBox(width: 10),
           _stat(u.rating > 0 ? u.rating.toStringAsFixed(1) : '-', 'Rating', Icons.star_rounded, Colors.amber),
         ])),

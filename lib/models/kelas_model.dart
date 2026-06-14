@@ -17,7 +17,7 @@ class KelasModel {
 
   bool get isFull => kuotaTerisi >= kuota;
   int get sisaSlot => kuota - kuotaTerisi;
-  String get hargaFormatted => "Rp\${(harga/1000).toStringAsFixed(0)}.000";
+  String get hargaFormatted => "Rp${(harga/1000).toStringAsFixed(0)}.000";
 
   factory KelasModel.fromMap(Map<String, dynamic> m, String id) => KelasModel(
     id: id, tutorId: m["tutorId"] ?? "", tutorNama: m["tutorNama"] ?? "",

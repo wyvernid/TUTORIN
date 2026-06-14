@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/admin_service.dart';
 import '../../services/laporan_service.dart';
+import '../../services/auth_service.dart';
+import '../auth/login_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -13,7 +15,7 @@ class AdminDashboardScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: CustomScrollView(slivers: [
-        SliverToBoxAdapter(child: _buildHeader()),
+        SliverToBoxAdapter(child: _buildHeader(context)),
         SliverToBoxAdapter(child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: const Text('Ringkasan Platform', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)))),
@@ -57,9 +59,9 @@ class AdminDashboardScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(l.kategori, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text('\${l.fromNama} → \${l.againstNama}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                    Text('${l.fromNama} → ${l.againstNama}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                   ])),
-                  Text('\${l.createdAt.day}/\${l.createdAt.month}', style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                  Text('${l.createdAt.day}/${l.createdAt.month}', style: TextStyle(fontSize: 10, color: Colors.grey[400])),
                 ]));
             }, childCount: items.length));
           }),
@@ -67,7 +69,7 @@ class AdminDashboardScreen extends StatelessWidget {
       ]));
   }
 
-  Widget _buildHeader() => Container(
+  Widget _buildHeader(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
     decoration: const BoxDecoration(color: Color(0xFF1565C0), borderRadius: BorderRadius.vertical(bottom: Radius.circular(28))),
     child: Row(children: [
@@ -77,7 +79,33 @@ class AdminDashboardScreen extends StatelessWidget {
       ])),
       Container(width: 42, height: 42, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
         child: const Icon(Icons.notifications_rounded, color: Colors.white, size: 22)),
+      const SizedBox(width: 10),
+      GestureDetector(
+        onTap: () => _confirmLogout(context),
+        child: Container(width: 42, height: 42, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+          child: const Icon(Icons.logout_rounded, color: Colors.white, size: 22)),
+      ),
     ]));
+
+  void _confirmLogout(BuildContext context) {
+    showDialog(context: context, builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text('Keluar', style: TextStyle(fontWeight: FontWeight.w700)),
+      content: const Text('Apakah Anda yakin ingin keluar dari akun admin?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () async {
+            Navigator.pop(context);
+            await AuthService().logout();
+            if (context.mounted) {
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+            }
+          },
+          child: const Text('Keluar')),
+      ]));
+  }
 }
 
 class _StreamStatCard extends StatelessWidget {

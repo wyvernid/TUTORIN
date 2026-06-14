@@ -40,7 +40,7 @@ class _State extends State<ReportScreen> {
   Future<void> _uploadBukti() async {
     final f = await _storage.ambilDariGaleri();
     if (f == null) return;
-    final url = await _storage.uploadBuktiLaporan('laporan_\${DateTime.now().millisecondsSinceEpoch}', f);
+    final url = await _storage.uploadBuktiLaporan('laporan_${DateTime.now().millisecondsSinceEpoch}', f);
     setState(() => _buktiUrl = url);
   }
 
@@ -58,7 +58,7 @@ class _State extends State<ReportScreen> {
         Icon(Icons.flag_rounded, color: Colors.red[600], size: 20),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Melaporkan: \${widget.targetNama}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.red[700])),
+          Text('Melaporkan: ${widget.targetNama}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.red[700])),
           Text(widget.targetRole, style: TextStyle(fontSize: 12, color: Colors.red[400])),
         ])),
       ])),

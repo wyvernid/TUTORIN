@@ -97,9 +97,9 @@ class _State extends State<StudentProfilScreen> {
               child: const Text('Student', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))),
           ])),
         Padding(padding: const EdgeInsets.fromLTRB(16,16,16,0), child: Row(children: [
-          _stat('\${u.totalKelasSelesai}', 'Kelas Selesai', Icons.check_circle_rounded, Colors.green),
+          _stat('${u.totalKelasSelesai}', 'Kelas Selesai', Icons.check_circle_rounded, Colors.green),
           const SizedBox(width: 10),
-          _stat(u.usia != null ? '\${u.usia} Thn' : '-', 'Usia', Icons.cake_outlined, const Color(0xFF1565C0)),
+          _stat(u.usia != null ? '${u.usia} Thn' : '-', 'Usia', Icons.cake_outlined, const Color(0xFF1565C0)),
           const SizedBox(width: 10),
           _stat(u.rating > 0 ? u.rating.toStringAsFixed(1) : '-', 'Rating', Icons.star_rounded, Colors.amber),
         ])),

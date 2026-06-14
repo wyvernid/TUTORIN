@@ -73,7 +73,7 @@ class _State extends State<PetaLokasiScreen> {
                 const Icon(Icons.touch_app_rounded, color: Color(0xFF1565C0), size: 18),
                 const SizedBox(width: 8),
                 Expanded(child: Text(_selected != null
-                    ? 'Dipilih: \${_selected!.latitude.toStringAsFixed(5)}, \${_selected!.longitude.toStringAsFixed(5)}'
+                    ? 'Dipilih: ${_selected!.latitude.toStringAsFixed(5)}, ${_selected!.longitude.toStringAsFixed(5)}'
                     : 'Tap pada peta untuk memilih lokasi',
                   style: TextStyle(fontSize: 12, color: Colors.grey[700]))),
               ]))),

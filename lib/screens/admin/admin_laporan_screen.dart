@@ -69,7 +69,7 @@ class _LaporanCardState extends State<_LaporanCard> {
                 Text(widget.isOpen ? 'Aktif' : 'Selesai', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: widget.isOpen ? Colors.red[700] : Colors.green[700])),
               ])),
             const Spacer(),
-            Text('\${l.createdAt.day}/\${l.createdAt.month}/\${l.createdAt.year}', style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+            Text('${l.createdAt.day}/${l.createdAt.month}/${l.createdAt.year}', style: TextStyle(fontSize: 10, color: Colors.grey[400])),
           ]),
           const SizedBox(height: 10),
           Text(l.kategori, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
