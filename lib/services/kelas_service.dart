@@ -26,6 +26,12 @@ class KelasService {
 
   Future<void> nonaktifkan(String id) => _db.collection('kelas').doc(id).update({'isActive': false});
 
+  /// Tandai SATU booking murid (sesi yang sudah berjalan) sebagai selesai,
+  /// tanpa mengubah status kelas. Kelas tetap tampil di katalog murid lain
+  /// (atau murid yang sama bisa booking ulang) selama kelas masih aktif.
+  Future<void> selesaikanBooking(String bookingId) =>
+      _db.collection('bookings').doc(bookingId).update({'status': 'completed'});
+
   // Booking
   Future<String> buatBooking(BookingModel b) async {
     final ref = await _db.collection('bookings').add(b.toMap());

@@ -11,7 +11,7 @@ class TutorVerifikasiPembayaranScreen extends StatefulWidget {
 
 class _State extends State<TutorVerifikasiPembayaranScreen> {
   final _service = KelasService();
-  bool _loading = false, _zoomed = false;
+  bool _loading = false;
 
   void _konfirmasi() async {
     setState(() => _loading = true);
@@ -45,6 +45,14 @@ class _State extends State<TutorVerifikasiPembayaranScreen> {
     ));
   }
 
+  void _bukaGambarPenuh() {
+    if (widget.booking.buktiBayarUrl == null) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => _FullImageViewer(imageUrl: widget.booking.buktiBayarUrl!),
+      fullscreenDialog: true,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFFF5F7FA),
@@ -65,12 +73,24 @@ class _State extends State<TutorVerifikasiPembayaranScreen> {
       const SizedBox(height: 14),
       const Text('Bukti Pembayaran', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
-      GestureDetector(onTap: () => setState(() => _zoomed = !_zoomed),
-        child: AnimatedContainer(duration: const Duration(milliseconds: 300), width: double.infinity, height: _zoomed ? 300 : 180,
+      GestureDetector(onTap: _bukaGambarPenuh,
+        child: Container(width: double.infinity, height: 220,
           decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey[300]!)),
           child: widget.booking.buktiBayarUrl != null
-              ? ClipRRect(borderRadius: BorderRadius.circular(13), child: Image.network(widget.booking.buktiBayarUrl!, fit: BoxFit.cover))
-              : Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.image_rounded, size: 44, color: Colors.grey[400]), Text(_zoomed ? 'Ketuk untuk perkecil' : 'Memuat bukti...', style: TextStyle(fontSize: 11, color: Colors.grey[400]))]))),
+              ? ClipRRect(borderRadius: BorderRadius.circular(13),
+                  child: Image.network(widget.booking.buktiBayarUrl!, fit: BoxFit.contain, width: double.infinity))
+              : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.image_rounded, size: 44, color: Colors.grey[400]),
+                  Text('Belum ada bukti pembayaran', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                ]))),
+      if (widget.booking.buktiBayarUrl != null) ...[
+        const SizedBox(height: 6),
+        Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.zoom_in_rounded, size: 14, color: Colors.grey[500]),
+          const SizedBox(width: 4),
+          Text('Ketuk gambar untuk memperbesar', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+        ])),
+      ],
       const SizedBox(height: 8),
       Text('Pastikan nominal & rekening sesuai sebelum konfirmasi.', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
       const SizedBox(height: 20),
@@ -96,4 +116,69 @@ class _State extends State<TutorVerifikasiPembayaranScreen> {
     SizedBox(width: 65, child: Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[500]))),
     Expanded(child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
   ]);
+}
+
+/// Halaman fullscreen untuk melihat bukti pembayaran secara penuh
+/// (tidak terpotong) dan bisa di-zoom dengan pinch/double tap.
+class _FullImageViewer extends StatefulWidget {
+  final String imageUrl;
+  const _FullImageViewer({required this.imageUrl});
+  @override
+  State<_FullImageViewer> createState() => _FullImageViewerState();
+}
+
+class _FullImageViewerState extends State<_FullImageViewer> {
+  final _transformCtrl = TransformationController();
+  TapDownDetails? _doubleTapDetails;
+
+  void _onDoubleTap() {
+    final pos = _doubleTapDetails?.localPosition;
+    if (_transformCtrl.value != Matrix4.identity()) {
+      _transformCtrl.value = Matrix4.identity();
+    } else if (pos != null) {
+      _transformCtrl.value = Matrix4.identity()
+        ..translate(-pos.dx * 2, -pos.dy * 2)
+        ..scale(3.0);
+    }
+  }
+
+  @override
+  void dispose() { _transformCtrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.white),
+      title: const Text('Bukti Pembayaran', style: TextStyle(color: Colors.white, fontSize: 14)),
+    ),
+    body: GestureDetector(
+      onDoubleTapDown: (d) => _doubleTapDetails = d,
+      onDoubleTap: _onDoubleTap,
+      child: InteractiveViewer(
+        transformationController: _transformCtrl,
+        minScale: 1,
+        maxScale: 5,
+        child: Center(
+          child: Image.network(
+            widget.imageUrl,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            },
+            errorBuilder: (context, error, stack) => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Gagal memuat gambar', style: TextStyle(color: Colors.white)),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

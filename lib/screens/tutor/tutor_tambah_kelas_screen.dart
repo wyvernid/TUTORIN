@@ -7,7 +7,9 @@ import '../../models/kelas_model.dart';
 import '../shared/peta_lokasi_screen.dart';
 
 class TutorTambahKelasScreen extends StatefulWidget {
-  const TutorTambahKelasScreen({super.key});
+  /// Jika null -> mode tambah kelas baru. Jika diisi -> mode edit kelas.
+  final KelasModel? kelas;
+  const TutorTambahKelasScreen({super.key, this.kelas});
   @override
   State<TutorTambahKelasScreen> createState() => _State();
 }
@@ -28,35 +30,75 @@ class _State extends State<TutorTambahKelasScreen> {
   final _dayList = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
   final _durations = ['30 menit','1 jam','1.5 jam','2 jam'];
 
+  bool get _isEdit => widget.kelas != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final k = widget.kelas;
+    if (k != null) {
+      _title.text = k.judul;
+      _desc.text = k.deskripsi;
+      _price.text = k.harga.toString();
+      _loc.text = k.lokasi;
+      _quota = k.kuota;
+      _duration = _durations.contains(k.durasi) ? k.durasi : '1 jam';
+      _mode = k.mode;
+      _category = _categories.contains(k.kategori) ? k.kategori : null;
+      _days.addAll(k.jadwal);
+      _tags.addAll(k.tags);
+      _lat = k.latitude;
+      _lng = k.longitude;
+      final parts = k.jamMulai.split('.');
+      if (parts.length == 2) {
+        _time = TimeOfDay(hour: int.tryParse(parts[0]) ?? 18, minute: int.tryParse(parts[1]) ?? 0);
+      }
+    }
+  }
+
   void _save() async {
     if (_title.text.isEmpty || _category == null || _days.isEmpty || _price.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lengkapi semua field wajib'))); return;
     }
     setState(() => _loading = true);
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final userData = await _auth.getUserData(user.uid);
-      final kelas = KelasModel(id: '', tutorId: user.uid, tutorNama: userData?.nama ?? user.displayName ?? '',
-        tutorFotoUrl: userData?.fotoUrl ?? '', judul: _title.text.trim(), deskripsi: _desc.text.trim(),
-        kategori: _category!, harga: int.tryParse(_price.text.replaceAll('.','')) ?? 0, kuota: _quota,
-        jadwal: _days.toList(), jamMulai: '${_time.hour}.${_time.minute.toString().padLeft(2, "0")}',
-        durasi: _duration, mode: _mode, lokasi: _loc.text.trim(), tags: _tags,
-        latitude: _lat ?? -7.9839, longitude: _lng ?? 113.6684, createdAt: DateTime.now());
-      await _service.tambahKelas(kelas);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kelas berhasil ditambahkan!'), backgroundColor: Colors.green));
-      Navigator.pop(context);
+      final jamMulai = '${_time.hour}.${_time.minute.toString().padLeft(2, "0")}';
+      final harga = int.tryParse(_price.text.replaceAll('.','')) ?? 0;
+      if (!_isEdit) {
+        final user = FirebaseAuth.instance.currentUser!;
+        final userData = await _auth.getUserData(user.uid);
+        final kelas = KelasModel(id: '', tutorId: user.uid, tutorNama: userData?.nama ?? user.displayName ?? '',
+          tutorFotoUrl: userData?.fotoUrl ?? '', judul: _title.text.trim(), deskripsi: _desc.text.trim(),
+          kategori: _category!, harga: harga, kuota: _quota,
+          jadwal: _days.toList(), jamMulai: jamMulai,
+          durasi: _duration, mode: _mode, lokasi: _loc.text.trim(), tags: _tags,
+          latitude: _lat ?? -7.9839, longitude: _lng ?? 113.6684, createdAt: DateTime.now());
+        await _service.tambahKelas(kelas);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kelas berhasil ditambahkan!'), backgroundColor: Colors.green));
+        Navigator.pop(context);
+      } else {
+        await _service.updateKelas(widget.kelas!.id, {
+          'judul': _title.text.trim(), 'deskripsi': _desc.text.trim(), 'kategori': _category!,
+          'harga': harga, 'kuota': _quota, 'jadwal': _days.toList(), 'jamMulai': jamMulai,
+          'durasi': _duration, 'mode': _mode, 'lokasi': _loc.text.trim(), 'tags': _tags,
+          'latitude': _lat ?? widget.kelas!.latitude, 'longitude': _lng ?? widget.kelas!.longitude,
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kelas berhasil diperbarui!'), backgroundColor: Colors.green));
+        Navigator.pop(context, true);
+      }
     } finally { if (mounted) setState(() => _loading = false); }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFFF5F7FA),
-    appBar: AppBar(title: const Text('Tambah Kelas'), leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded), onPressed: () => Navigator.pop(context))),
+    appBar: AppBar(title: Text(_isEdit ? 'Edit Kelas' : 'Tambah Kelas'), leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded), onPressed: () => Navigator.pop(context))),
     bottomNavigationBar: SafeArea(child: Padding(padding: const EdgeInsets.all(14),
       child: ElevatedButton(onPressed: _loading ? null : _save,
         child: _loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Text('Simpan Kelas', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700))))),
+            : Text(_isEdit ? 'Update Kelas' : 'Simpan Kelas', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700))))),
     body: SingleChildScrollView(padding: const EdgeInsets.all(14), child: Column(children: [
       _card([
         const Text('Informasi Kelas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
