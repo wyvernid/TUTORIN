@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 import '../../models/user_model.dart';
 import '../auth/login_screen.dart';
+import 'tutor_riwayat_pembayaran_screen.dart';
+import 'tutor_upload_portofolio_screen.dart';
+import 'tutor_upload_cv_screen.dart'; // Tambahkan import untuk screen CV
 
 class TutorProfilScreen extends StatefulWidget {
   const TutorProfilScreen({super.key});
@@ -13,13 +17,18 @@ class TutorProfilScreen extends StatefulWidget {
 }
 
 class _State extends State<TutorProfilScreen> {
-  final _auth = AuthService(); final _storage = StorageService();
-  UserModel? _user; bool _loadingFoto = false;
+  final _auth = AuthService(); 
+  final _storage = StorageService();
+  UserModel? _user; 
+  bool _loadingFoto = false;
 
   @override
   void initState() { super.initState(); _load(); }
 
-  Future<void> _load() async { final u = await _auth.getUserData(FirebaseAuth.instance.currentUser!.uid); if (mounted) setState(() => _user = u); }
+  Future<void> _load() async { 
+    final u = await _auth.getUserData(FirebaseAuth.instance.currentUser!.uid); 
+    if (mounted) setState(() => _user = u); 
+  }
 
   Future<void> _updateFoto(ImageSource src) async {
     setState(() => _loadingFoto = true);
@@ -98,9 +107,23 @@ class _State extends State<TutorProfilScreen> {
         const SizedBox(height: 12),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 5)]),
           child: Column(children: [
-            _menu(Icons.upload_file_rounded, 'Upload Portofolio', () {}),
+            
+            _menu(Icons.upload_file_rounded, 'Upload Portofolio', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorUploadPortofolioScreen()));
+            }),
             const Divider(height: 0, indent: 52),
-            _menu(Icons.history_rounded, 'Riwayat Pembayaran', () {}),
+            
+            // --- MENU UPLOAD CV BARU ---
+            _menu(Icons.description_rounded, 'Upload CV', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorUploadCvScreen()));
+            }),
+            const Divider(height: 0, indent: 52),
+            // ---------------------------
+
+            _menu(Icons.history_rounded, 'Riwayat Pembayaran', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TutorRiwayatPembayaranScreen()));
+            }),
+
             const Divider(height: 0, indent: 52),
             _menu(Icons.logout_rounded, 'Keluar', () async { await _auth.logout(); if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())); }, color: Colors.red),
           ]))),
