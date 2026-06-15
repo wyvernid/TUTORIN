@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/kelas_model.dart';
 import '../../models/booking_model.dart';
 import '../../services/kelas_service.dart';
+import '../shared/ulasan_section.dart';
 import 'tutor_tambah_kelas_screen.dart';
 
 class TutorDetailKelasScreen extends StatefulWidget {
@@ -127,6 +128,8 @@ class _State extends State<TutorDetailKelasScreen> {
           const SizedBox(height: 8),
           _row(Icons.event_rounded, 'Dibuat', '${k.createdAt.day}/${k.createdAt.month}/${k.createdAt.year}'),
         ])),
+        const SizedBox(height: 12),
+        UlasanSection(kelasId: k.id, ratingAvg: k.rating, jumlahUlasan: k.jumlahUlasan, service: widget.service),
         const SizedBox(height: 12),
         _card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Daftar Murid', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),

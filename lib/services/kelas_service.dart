@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/kelas_model.dart';
 import '../models/booking_model.dart';
+import '../models/ulasan_model.dart';
 
 class KelasService {
   final _db = FirebaseFirestore.instance;
@@ -66,6 +67,21 @@ class KelasService {
       .where('tutorId', isEqualTo: tutorId).orderBy('createdAt', descending: true)
       .snapshots().map((s) => s.docs.map((d) => BookingModel.fromMap(d.data(), d.id)).toList());
 
+  /// Hitung ulang rating & jumlahUlasan kelas dari data ulasan yang sudah ada
+  /// di Firestore. Berguna untuk sinkronisasi ulang ulasan lama yang gagal
+  /// terhitung sebelum security rules diperbaiki.
+  Future<void> recalculateRatingKelas(String kelasId) async {
+    final snap = await _db.collection('ulasan').where('kelasId', isEqualTo: kelasId).get();
+    final avg = snap.docs.isEmpty ? 0.0
+        : snap.docs.map((d) => (d.data()['rating'] as num).toDouble()).reduce((a, b) => a + b) / snap.docs.length;
+    await _db.collection('kelas').doc(kelasId).update({'rating': avg, 'jumlahUlasan': snap.docs.length});
+  }
+
+  /// Stream semua ulasan untuk satu kelas, terbaru lebih dulu.
+  Stream<List<UlasanModel>> streamUlasanKelas(String kelasId) => _db.collection('ulasan')
+      .where('kelasId', isEqualTo: kelasId).orderBy('createdAt', descending: true)
+      .snapshots().map((s) => s.docs.map((d) => UlasanModel.fromMap(d.data(), d.id)).toList());
+
   Future<void> submitUlasan({required String bookingId, required String kelasId,
       required String tutorId, required int rating, required String komentar, required String studentNama}) async {
     final batch = _db.batch();
@@ -74,11 +90,19 @@ class KelasService {
       'kelasId': kelasId, 'tutorId': tutorId, 'studentNama': studentNama,
       'rating': rating, 'komentar': komentar, 'createdAt': FieldValue.serverTimestamp()});
     await batch.commit();
-    // Hitung ulang rating tutor
-    final snap = await _db.collection('ulasan').where('tutorId', isEqualTo: tutorId).get();
-    if (snap.docs.isNotEmpty) {
-      final avg = snap.docs.map((d) => (d.data()['rating'] as num).toDouble()).reduce((a,b)=>a+b) / snap.docs.length;
-      await _db.collection('users').doc(tutorId).update({'rating': avg, 'jumlahUlasan': snap.docs.length});
+
+    // Hitung ulang rating & jumlah ulasan KELAS (yang sebelumnya tidak pernah terupdate)
+    final kelasUlasan = await _db.collection('ulasan').where('kelasId', isEqualTo: kelasId).get();
+    if (kelasUlasan.docs.isNotEmpty) {
+      final avgKelas = kelasUlasan.docs.map((d) => (d.data()['rating'] as num).toDouble()).reduce((a, b) => a + b) / kelasUlasan.docs.length;
+      await _db.collection('kelas').doc(kelasId).update({'rating': avgKelas, 'jumlahUlasan': kelasUlasan.docs.length});
+    }
+
+    // Hitung ulang rating tutor (rata-rata dari seluruh ulasan kelas-kelas tutor tersebut)
+    final tutorUlasan = await _db.collection('ulasan').where('tutorId', isEqualTo: tutorId).get();
+    if (tutorUlasan.docs.isNotEmpty) {
+      final avgTutor = tutorUlasan.docs.map((d) => (d.data()['rating'] as num).toDouble()).reduce((a, b) => a + b) / tutorUlasan.docs.length;
+      await _db.collection('users').doc(tutorId).update({'rating': avgTutor, 'jumlahUlasan': tutorUlasan.docs.length});
     }
   }
 }
