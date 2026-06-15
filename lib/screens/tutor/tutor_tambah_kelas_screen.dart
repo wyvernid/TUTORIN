@@ -158,8 +158,16 @@ class _State extends State<TutorTambahKelasScreen> {
         if (_mode != 'online') ...[const SizedBox(height: 10), _f('Lokasi / Alamat', _loc, hint: 'Jln. Kalimantan No.37', icon: Icons.location_on_rounded),
           const SizedBox(height: 8),
           OutlinedButton.icon(onPressed: () async {
-            final pos = await Navigator.push<LatLng>(context, MaterialPageRoute(builder: (_) => const PetaLokasiScreen(pickMode: true)));
-            if (pos != null) setState(() { _lat = pos.latitude; _lng = pos.longitude; _loc.text = 'Lat: ${pos.latitude.toStringAsFixed(5)}, Lng: ${pos.longitude.toStringAsFixed(5)}'; });
+            final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PetaLokasiScreen(pickMode: true)));
+            if (result != null) {
+              final latlng = result['latlng'] as LatLng;
+              final alamat = result['alamat'] as String?;
+              setState(() {
+                _lat = latlng.latitude;
+                _lng = latlng.longitude;
+                _loc.text = alamat ?? 'Lat: ${latlng.latitude.toStringAsFixed(5)}, Lng: ${latlng.longitude.toStringAsFixed(5)}';
+              });
+            }
           }, icon: const Icon(Icons.map_rounded, size: 16), label: Text(_lat != null ? 'Lokasi dipilih ✓' : 'Pilih di Peta'),
           style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF1565C0), side: const BorderSide(color: Color(0xFF1565C0))))],
       ]),
