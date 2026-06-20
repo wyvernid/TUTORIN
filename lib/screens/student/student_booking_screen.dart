@@ -18,11 +18,11 @@ class _State extends State<StudentBookingScreen> {
   final _kelasService = KelasService();
   final _storage      = StorageService();
 
-  int?   _selectedIdx;
+  final Set<int> _selectedIdx = {};
   int    _step     = 1;
   bool   _loading  = false;
   File?  _buktiBayar;
-  String? _bookingId;
+  final List<String> _bookingIds = [];
 
   List<Map<String, String>> get _dates {
     const dayNums = {'Senin':1,'Selasa':2,'Rabu':3,'Kamis':4,'Jumat':5,'Sabtu':6,'Minggu':7};
@@ -46,23 +46,39 @@ class _State extends State<StudentBookingScreen> {
     return result;
   }
 
+  int get _totalBayar => widget.kelas.harga * _selectedIdx.length;
+  String get _totalBayarFormatted {
+    final s = _totalBayar.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return 'Rp$buf';
+  }
+
   Future<void> _createBooking() async {
     final me    = FirebaseAuth.instance.currentUser!;
     final dates = _dates;
-    final b = BookingModel(
-      id: '',
-      kelasId:      widget.kelas.id,
-      kelasJudul:   widget.kelas.judul,
-      tutorId:      widget.kelas.tutorId,
-      tutorNama:    widget.kelas.tutorNama,
-      studentId:    me.uid,
-      studentNama:  me.displayName ?? me.email ?? '',
-      jadwalDipilih: dates[_selectedIdx!]['date']!,
-      jamDipilih:    dates[_selectedIdx!]['time']!,
-      noTelepon:     _phoneCtrl.text.trim(),
-      nominal:       widget.kelas.harga,
-      createdAt:     DateTime.now());
-    _bookingId = await _kelasService.buatBooking(b);
+    _bookingIds.clear();
+    // Satu booking dibuat untuk setiap jadwal yang dipilih murid.
+    for (final idx in _selectedIdx) {
+      final b = BookingModel(
+        id: '',
+        kelasId:      widget.kelas.id,
+        kelasJudul:   widget.kelas.judul,
+        tutorId:      widget.kelas.tutorId,
+        tutorNama:    widget.kelas.tutorNama,
+        studentId:    me.uid,
+        studentNama:  me.displayName ?? me.email ?? '',
+        jadwalDipilih: dates[idx]['date']!,
+        jamDipilih:    dates[idx]['time']!,
+        noTelepon:     _phoneCtrl.text.trim(),
+        nominal:       widget.kelas.harga,
+        createdAt:     DateTime.now());
+      final id = await _kelasService.buatBooking(b);
+      _bookingIds.add(id);
+    }
   }
 
   Future<void> _uploadAndSubmit() async {
@@ -73,8 +89,12 @@ class _State extends State<StudentBookingScreen> {
     }
     setState(() => _loading = true);
     try {
-      final url = await _storage.uploadBuktiBayar(_bookingId!, _buktiBayar!);
-      await _kelasService.uploadBukti(_bookingId!, url);
+      // Bukti pembayaran yang sama dipakai untuk semua sesi yang dipilih,
+      // karena pembayarannya digabung dalam satu kali transfer.
+      final url = await _storage.uploadBuktiBayar(_bookingIds.first, _buktiBayar!);
+      for (final id in _bookingIds) {
+        await _kelasService.uploadBukti(id, url);
+      }
       if (!mounted) return;
       _showSuccessSheet();
     } catch (e) {
@@ -115,6 +135,7 @@ class _State extends State<StudentBookingScreen> {
 
   void _showSuccessSheet() {
     final dates = _dates;
+    final selectedList = _selectedIdx.toList()..sort();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -146,10 +167,12 @@ class _State extends State<StudentBookingScreen> {
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               Text('Tutor: ${widget.kelas.tutorNama}',
                 style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-              if (_selectedIdx != null)
-                Text(
-                  '${dates[_selectedIdx!]['day']}, ${dates[_selectedIdx!]['date']} - ${dates[_selectedIdx!]['time']} WIB',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              const SizedBox(height: 6),
+              Text('${selectedList.length} sesi dipilih:',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+              ...selectedList.map((idx) => Text(
+                  '• ${dates[idx]['day']}, ${dates[idx]['date']} - ${dates[idx]['time']} WIB',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]))),
             ])),
           const SizedBox(height: 20),
           Row(children: [
@@ -205,20 +228,22 @@ class _State extends State<StudentBookingScreen> {
         const SizedBox(height: 20),
         const Text('Pilih Jadwal', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        Text('Pilih salah satu sesi yang tersedia',
+        Text('Bisa pilih lebih dari satu sesi sekaligus',
           style: TextStyle(fontSize: 11, color: Colors.grey[500])),
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, childAspectRatio: 1.05,
+            crossAxisCount: 3, childAspectRatio: 1.65,
             crossAxisSpacing: 8, mainAxisSpacing: 8),
           itemCount: dates.length,
           itemBuilder: (_, i) {
-            final sel = _selectedIdx == i;
+            final sel = _selectedIdx.contains(i);
             return GestureDetector(
-              onTap: () => setState(() => _selectedIdx = i),
+              onTap: () => setState(() {
+                if (sel) _selectedIdx.remove(i); else _selectedIdx.add(i);
+              }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
@@ -226,22 +251,38 @@ class _State extends State<StudentBookingScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: sel ? const Color(0xFF1565C0) : Colors.grey[300]!),
                   boxShadow: sel ? [BoxShadow(color: const Color(0xFF1565C0).withOpacity(0.3), blurRadius: 8, offset: const Offset(0,3))] : []),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.calendar_month_rounded, size: 18,
-                    color: sel ? Colors.white : const Color(0xFF1565C0)),
-                  const SizedBox(height: 4),
-                  Text(dates[i]['day']!,
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                      color: sel ? Colors.white : Colors.grey[800])),
-                  Text(dates[i]['date']!,
-                    style: TextStyle(fontSize: 8,
-                      color: sel ? Colors.white70 : Colors.grey[500]),
-                    textAlign: TextAlign.center),
-                  Text('${dates[i]['time']!} WIB',
-                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600,
-                      color: sel ? Colors.white : Colors.grey[700])),
+                child: Stack(fit: StackFit.expand, children: [
+                  Positioned.fill(
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.calendar_month_rounded, size: 15,
+                        color: sel ? Colors.white : const Color(0xFF1565C0)),
+                      const SizedBox(height: 3),
+                      Text(dates[i]['day']!,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                          color: sel ? Colors.white : Colors.grey[800])),
+                      Text(dates[i]['date']!,
+                        style: TextStyle(fontSize: 8,
+                          color: sel ? Colors.white70 : Colors.grey[500]),
+                        textAlign: TextAlign.center),
+                      Text('${dates[i]['time']!} WIB',
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600,
+                          color: sel ? Colors.white : Colors.grey[700])),
+                    ])),
+                  if (sel) Positioned(top: 4, right: 4,
+                    child: Icon(Icons.check_circle_rounded, size: 14, color: Colors.white.withOpacity(0.9))),
                 ])));
           }),
+        if (_selectedIdx.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(width: double.infinity, padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFF1565C0).withOpacity(0.06), borderRadius: BorderRadius.circular(12)),
+            child: Row(children: [
+              const Icon(Icons.event_available_rounded, size: 16, color: Color(0xFF1565C0)),
+              const SizedBox(width: 8),
+              Expanded(child: Text('${_selectedIdx.length} sesi dipilih · Total $_totalBayarFormatted',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1565C0)))),
+            ])),
+        ],
         const SizedBox(height: 20),
         const Text('Nomor Telepon yang Bisa Dihubungi',
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
@@ -255,7 +296,7 @@ class _State extends State<StudentBookingScreen> {
         const SizedBox(height: 28),
         SizedBox(width: double.infinity,
           child: ElevatedButton(
-            onPressed: _selectedIdx == null
+            onPressed: _selectedIdx.isEmpty
                 ? null
                 : () async {
                     if (_phoneCtrl.text.trim().isEmpty) {
@@ -275,65 +316,73 @@ class _State extends State<StudentBookingScreen> {
       ]));
   }
 
-  Widget _buildStep2() => SingleChildScrollView(
-    key: const ValueKey(2),
-    padding: const EdgeInsets.all(16),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _stepIndicator(2),
-      const SizedBox(height: 20),
-      const Text('Informasi Pembayaran',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 16),
-      _infoCard(child: Column(children: [
-        _payRow('Kelas', widget.kelas.judul),
-        const Divider(height: 20),
-        _payRow('Tutor', widget.kelas.tutorNama),
-        const Divider(height: 20),
-        _payRow('Jadwal',
-          _selectedIdx != null
-              ? '${_dates[_selectedIdx!]['day']}, ${_dates[_selectedIdx!]['date']}'
-              : '-'),
-        const Divider(height: 20),
-        _payRow('Total Bayar', widget.kelas.hargaFormatted, isTotal: true),
-      ])),
-      const SizedBox(height: 16),
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1565C0).withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1565C0).withOpacity(0.2))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Transfer ke Rekening:',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1565C0))),
-          const SizedBox(height: 12),
-          _bankRow('BCA', '1234 5678 9012', 'TutorIn Official'),
-          const SizedBox(height: 10),
-          _bankRow('Mandiri', '0987 6543 2100', 'TutorIn Official'),
-          const SizedBox(height: 10),
-          _bankRow('GoPay/OVO', '0812-3456-7890', 'TutorIn'),
+  Widget _buildStep2() {
+    final dates = _dates;
+    final selectedList = _selectedIdx.toList()..sort();
+    return SingleChildScrollView(
+      key: const ValueKey(2),
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _stepIndicator(2),
+        const SizedBox(height: 20),
+        const Text('Informasi Pembayaran',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 16),
+        _infoCard(child: Column(children: [
+          _payRow('Kelas', widget.kelas.judul),
+          const Divider(height: 20),
+          _payRow('Tutor', widget.kelas.tutorNama),
+          const Divider(height: 20),
+          _payRow('Jumlah Sesi', '${selectedList.length} sesi'),
+          const Divider(height: 20),
+          Align(alignment: Alignment.centerLeft,
+            child: Text('Jadwal Dipilih', style: TextStyle(fontSize: 12, color: Colors.grey[600]))),
+          const SizedBox(height: 6),
+          ...selectedList.map((idx) => Padding(padding: const EdgeInsets.only(bottom: 4),
+            child: Text('• ${dates[idx]['day']}, ${dates[idx]['date']} - ${dates[idx]['time']} WIB',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)))),
+          const Divider(height: 20),
+          _payRow('Total Bayar', _totalBayarFormatted, isTotal: true),
         ])),
-      const SizedBox(height: 12),
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.orange[50],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange[200]!)),
-        child: Row(children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text(
-            'Setelah transfer, segera upload bukti agar slot tidak dilepas.',
-            style: TextStyle(fontSize: 12, color: Colors.orange[800]))),
-        ])),
-      const SizedBox(height: 24),
-      SizedBox(width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () => setState(() => _step = 3),
-          child: const Text('Sudah Transfer, Upload Bukti',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)))),
-    ]));
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1565C0).withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF1565C0).withOpacity(0.2))),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Transfer ke Rekening:',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1565C0))),
+            const SizedBox(height: 12),
+            _bankRow('BCA', '1234 5678 9012', 'TutorIn Official'),
+            const SizedBox(height: 10),
+            _bankRow('Mandiri', '0987 6543 2100', 'TutorIn Official'),
+            const SizedBox(height: 10),
+            _bankRow('GoPay/OVO', '0812-3456-7890', 'TutorIn'),
+          ])),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orange[200]!)),
+          child: Row(children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(
+              'Setelah transfer, segera upload bukti agar slot tidak dilepas.',
+              style: TextStyle(fontSize: 12, color: Colors.orange[800]))),
+          ])),
+        const SizedBox(height: 24),
+        SizedBox(width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () => setState(() => _step = 3),
+            child: const Text('Sudah Transfer, Upload Bukti',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)))),
+      ]));
+  }
 
   Widget _buildStep3() => SingleChildScrollView(
     key: const ValueKey(3),
@@ -387,7 +436,9 @@ class _State extends State<StudentBookingScreen> {
         const SizedBox(height: 4),
         _payRow('Tutor', widget.kelas.tutorNama),
         const SizedBox(height: 4),
-        _payRow('Total', widget.kelas.hargaFormatted, isTotal: true),
+        _payRow('Jumlah Sesi', '${_selectedIdx.length} sesi'),
+        const SizedBox(height: 4),
+        _payRow('Total', _totalBayarFormatted, isTotal: true),
       ])),
       const SizedBox(height: 24),
       SizedBox(width: double.infinity,
