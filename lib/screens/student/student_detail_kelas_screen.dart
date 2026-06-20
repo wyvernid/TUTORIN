@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/kelas_model.dart';
+import '../../models/booking_model.dart'; 
 import '../../services/kelas_service.dart';
 import '../shared/ulasan_section.dart';
 import '../shared/peta_lokasi_screen.dart';
@@ -8,158 +10,322 @@ import 'student_booking_screen.dart';
 
 class StudentDetailKelasScreen extends StatelessWidget {
   final KelasModel kelas;
-  const StudentDetailKelasScreen({super.key, required this.kelas});
+  final BookingModel? booking; 
+
+  const StudentDetailKelasScreen({super.key, required this.kelas, this.booking});
 
   @override
   Widget build(BuildContext context) => Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-      title: const Text('Detail Pembelajaran'),
-      leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.pop(context))),
-      bottomNavigationBar: SafeArea(
-      child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: ElevatedButton(
-          onPressed: kelas.isFull
-              ? null
-              : () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => StudentBookingScreen(kelas: kelas))),
-          child: Text(
-              kelas.isFull ? 'Kelas Penuh' : 'Booking Kelas',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))))),
+          title: const Text('Detail Pembelajaran'),
+          leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => Navigator.pop(context))),
+      bottomNavigationBar: booking != null 
+          ? null 
+          : SafeArea(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: ElevatedButton(
+                      onPressed: kelas.isFull
+                          ? null
+                          : () => Navigator.push(context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      StudentBookingScreen(kelas: kelas))),
+                      child: Text(
+                          kelas.isFull ? 'Kelas Penuh' : 'Booking Kelas',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700))))),
       body: SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          padding: const EdgeInsets.all(16),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            
+            // Tampilkan Sesi info jika diakses dari Kelas Saya
+            if (booking != null) ...[
+              _card(
+                title: 'Sesi Kelas Anda',
+                child: Column(
+                  children: [
+                    _row(Icons.calendar_today_rounded, 'Tanggal: ${booking!.jadwalDipilih}'),
+                    const SizedBox(height: 6),
+                    _row(Icons.access_time_rounded, 'Jam Sesi: ${booking!.jamDipilih} WIB'),
+                    const SizedBox(height: 6),
+                    _row(Icons.check_circle_rounded, 'Status Kelas: Terverifikasi Tutor', color: Colors.green),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
 
-          _card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(kelas.judul,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          if (kelas.deskripsi.isNotEmpty)
-              Text(kelas.deskripsi,
-              style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
-          const SizedBox(height: 14),
-          _row(Icons.people_rounded,
-              '${kelas.kuota} kuota total  ·  ${kelas.sisaSlot} slot tersisa',
-              color: kelas.isFull ? Colors.red : Colors.green),
-          const SizedBox(height: 6),
-          _row(Icons.schedule_rounded, 'Durasi: ${kelas.durasi}'),
-          const SizedBox(height: 6),
-          _row(Icons.attach_money_rounded, '${kelas.hargaFormatted} / sesi'),
-          const SizedBox(height: 6),
-          _row(Icons.calendar_today_rounded,
-              kelas.pakaiJadwalSesi
-                  ? '${kelas.jadwalSesi.length} tanggal  ·  ${kelas.totalSesi} sesi tersedia'
-                  : '${kelas.jadwal.join(', ')}  ·  ${kelas.jamMulai} WIB'),
-          if (kelas.pakaiJadwalSesi) ...[
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFFF5F7FA), borderRadius: BorderRadius.circular(10)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                children: kelas.jadwalSesi.map((j) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(flex: 2, child: Text(j.tanggalFormatted,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-                    Expanded(flex: 3, child: Text('${j.jamList.map((t) => "$t WIB").join(", ")}',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]))),
-                  ]))).toList()),
-            ),
-          ],
-          const SizedBox(height: 6),
-          _row(Icons.wifi_rounded,
-              kelas.mode == 'online' ? 'Online'
-                  : kelas.mode == 'keduanya' ? 'Online & Offline'
-                  : 'Offline'),
-          ])),
-          const SizedBox(height: 12),
-
-          _card(title: 'Profil Tutor', child: Row(children: [
-          Container(width: 66, height: 66,
-              decoration: BoxDecoration(
-              color: const Color(0xFF1565C0).withOpacity(0.1),
-              shape: BoxShape.circle),
-              child: kelas.tutorFotoUrl.isNotEmpty
-                  ? ClipOval(child: Image.network(kelas.tutorFotoUrl, fit: BoxFit.cover))
-                  : const Icon(Icons.person_rounded, color: Color(0xFF1565C0), size: 38)),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(kelas.tutorNama,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              Row(children: [
-              const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFC107)),
-              const SizedBox(width: 3),
-              Text('${kelas.rating.toStringAsFixed(1)} (${kelas.jumlahUlasan} ulasan)',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              ]),
+            // Card utama info kelas
+            _card(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+              Text(kelas.judul,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              if (kelas.deskripsi.isNotEmpty)
+                Text(kelas.deskripsi,
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        height: 1.5)),
+              const SizedBox(height: 14),
+              _row(Icons.people_rounded,
+                  '${kelas.kuota} kuota total  ·  ${kelas.sisaSlot} slot tersisa',
+                  color: kelas.isFull ? Colors.red : Colors.green),
               const SizedBox(height: 6),
-              if (kelas.tags.isNotEmpty)
-              Wrap(spacing: 4, runSpacing: 4,
-                  children: kelas.tags.map((t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFF1565C0),
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Text(t, style: const TextStyle(
-                      color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)))).toList()),
-          ])),
-          ])),
-          const SizedBox(height: 12),
+              _row(Icons.schedule_rounded, 'Durasi: ${kelas.durasi}'),
+              const SizedBox(height: 6),
+              _row(Icons.attach_money_rounded, '${kelas.hargaFormatted} / sesi'),
+              const SizedBox(height: 6),
+              _row(
+                  Icons.calendar_today_rounded,
+                  kelas.pakaiJadwalSesi
+                      ? '${kelas.jadwalSesi.length} tanggal  ·  ${kelas.totalSesi} sesi tersedia'
+                      : '${kelas.jadwal.join(', ')}  ·  ${kelas.jamMulai} WIB'),
+              if (kelas.pakaiJadwalSesi) ...[
+                const SizedBox(height: 8),
+                Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFFF5F7FA),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: kelas.jadwalSesi
+                            .map((j) => Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 3),
+                                child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  Expanded(
+                                      flex: 2,
+                                      child: Text(j.tanggalFormatted,
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600))),
+                                  Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                          j.jamList
+                                              .map((t) => '$t WIB')
+                                              .join(', '),
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[600]))),
+                                ])))
+                            .toList())),
+              ],
+              const SizedBox(height: 6),
+              _row(
+                  Icons.wifi_rounded,
+                  kelas.mode == 'online'
+                      ? 'Online'
+                      : kelas.mode == 'keduanya'
+                          ? 'Online & Offline'
+                          : 'Offline'),
+            ])),
+            const SizedBox(height: 12),
 
-          if (kelas.mode != 'online')
-          _card(title: 'Lokasi', child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-              if (kelas.lokasi.isNotEmpty)
-                  _row(Icons.location_on_rounded, kelas.lokasi),
-              const SizedBox(height: 10),
-              GestureDetector(
-                  onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => PetaLokasiScreen(
-                      initialPosition: LatLng(kelas.latitude, kelas.longitude),
-                      judulKelas: kelas.judul))),
-                  child: Container(
-                  height: 120, width: double.infinity,
-                  decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF1565C0).withOpacity(0.2))),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Icon(Icons.map_rounded, color: Color(0xFF1565C0), size: 36),
-                      const SizedBox(height: 6),
-                      const Text('Lihat di Peta OpenStreetMap',
-                      style: TextStyle(color: Color(0xFF1565C0), fontSize: 12, fontWeight: FontWeight.w600)),
-                  ]))),
-              ])),
-          if (kelas.mode != 'online') const SizedBox(height: 12),
+            // Link Zoom HANYA muncul jika diakses lewat kelas terverifikasi student
+            if (booking != null && kelas.zoomLink != null && kelas.zoomLink!.isNotEmpty) ...[
+              _card(
+                  title: 'Link Kelas Online',
+                  child: _buildZoomLink(context, kelas.zoomLink!)),
+              const SizedBox(height: 12),
+            ],
 
-          UlasanSection(kelasId: kelas.id, ratingAvg: kelas.rating, jumlahUlasan: kelas.jumlahUlasan, service: KelasService()),
+            // Card Profil Tutor
+            _card(
+                title: 'Profil Tutor',
+                child: Row(children: [
+                  Container(
+                      width: 66,
+                      height: 66,
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF1565C0).withOpacity(0.1),
+                          shape: BoxShape.circle),
+                      child: kelas.tutorFotoUrl.isNotEmpty
+                          ? ClipOval(
+                              child: Image.network(kelas.tutorFotoUrl,
+                                  fit: BoxFit.cover))
+                          : const Icon(Icons.person_rounded,
+                              color: Color(0xFF1565C0), size: 38)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                    Text(kelas.tutorNama,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      const Icon(Icons.star_rounded,
+                          size: 14, color: Color(0xFFFFC107)),
+                      const SizedBox(width: 3),
+                      Text(
+                          '${kelas.rating.toStringAsFixed(1)} (${kelas.jumlahUlasan} ulasan)',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[600])),
+                    ]),
+                    const SizedBox(height: 6),
+                    if (kelas.tags.isNotEmpty)
+                      Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: kelas.tags
+                              .map((t) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                      color: const Color(0xFF1565C0),
+                                      borderRadius:
+                                          BorderRadius.circular(20)),
+                                  child: Text(t,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600))))
+                              .toList()),
+                  ])),
+                ])),
+            const SizedBox(height: 12),
 
-          const SizedBox(height: 80),
-      ])));
+            // Card Lokasi (Map)
+            if (kelas.mode != 'online')
+              _card(
+                  title: 'Lokasi',
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    if (kelas.lokasi.isNotEmpty)
+                      _row(Icons.location_on_rounded, kelas.lokasi),
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => PetaLokasiScreen(
+                                    initialPosition: LatLng(
+                                        kelas.latitude, kelas.longitude),
+                                    judulKelas: kelas.judul))),
+                        child: Container(
+                            height: 120,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: const Color(0xFF1565C0)
+                                        .withOpacity(0.2))),
+                            child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                children: [
+                              const Icon(Icons.map_rounded,
+                                  color: Color(0xFF1565C0), size: 36),
+                              const SizedBox(height: 6),
+                              const Text(
+                                  'Lihat di Peta OpenStreetMap',
+                                  style: TextStyle(
+                                      color: Color(0xFF1565C0),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600)),
+                            ]))),
+                  ])),
+            if (kelas.mode != 'online') const SizedBox(height: 12),
+
+            UlasanSection(
+                kelasId: kelas.id,
+                ratingAvg: kelas.rating,
+                jumlahUlasan: kelas.jumlahUlasan,
+                service: KelasService()),
+
+            const SizedBox(height: 80),
+          ])));
+
+  Widget _buildZoomLink(BuildContext context, String link) => InkWell(
+      onTap: () async {
+        final uri = Uri.tryParse(link);
+        if (uri != null && await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted)
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Tidak bisa membuka link')));
+        }
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: const Color(0xFF1565C0).withOpacity(0.3))),
+          child: Row(children: [
+            Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                    color: const Color(0xFF1565C0),
+                    borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.video_camera_front_rounded,
+                    color: Colors.white, size: 20)),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  const Text('Buka Link Zoom / Meeting',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1565C0))),
+                  Text(link,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                ])),
+            Icon(Icons.open_in_new_rounded, size: 16, color: Colors.grey[400]),
+          ])));
 
   Widget _card({String? title, required Widget child}) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)
+          ]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (title != null) ...[
-          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12)],
-      child]));
+        if (title != null) ...[
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12)
+        ],
+        child,
+      ]));
 
-  Widget _row(IconData icon, String text, {Color? color}) => Row(children: [
-      Icon(icon, size: 15, color: color ?? const Color(0xFF1565C0)),
-      const SizedBox(width: 8),
-      Expanded(child: Text(text,
-      style: TextStyle(fontSize: 12, color: color ?? Colors.grey[700]))),
-  ]);
+  Widget _row(IconData icon, String text, {Color? color}) =>
+      Row(children: [
+        Icon(icon, size: 15, color: color ?? const Color(0xFF1565C0)),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: 12, color: color ?? Colors.grey[700]))),
+      ]);
 }

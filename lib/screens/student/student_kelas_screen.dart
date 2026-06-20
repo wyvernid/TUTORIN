@@ -4,6 +4,7 @@ import '../../services/kelas_service.dart';
 import '../../models/booking_model.dart';
 import '../shared/chat_room_screen.dart';
 import '../shared/report_screen.dart';
+import 'student_detail_kelas_screen.dart'; // Tambahan import halaman detail
 
 class StudentKelasScreen extends StatefulWidget {
   const StudentKelasScreen({super.key});
@@ -173,102 +174,140 @@ class _BookingCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(
-        padding: const EdgeInsets.all(14),
+  Widget build(BuildContext context) {
+    // Mengecek apakah statusnya sudah terkonfirmasi / selesai agar bisa diklik
+    final bool canClick = booking.status == 'confirmed' || booking.status == 'completed';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        // PERBAIKAN: Hanya bisa diklik jika sudah terkonfirmasi
+        onTap: canClick ? () async {
+          // Menampilkan loading indikator saat fetching data kelas asli dari Firestore
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
+          
+          try {
+            // Ambil data detail kelas lengkap menggunakan kelasId dari model booking
+            final kelasDetail = await KelasService().getKelasById(booking.kelasId);
+            
+            if (context.mounted) Navigator.pop(context); // Tutup loading dialog
+            
+            if (kelasDetail != null && context.mounted) {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => StudentDetailKelasScreen(kelas: kelasDetail, booking: booking),
+              ));
+            }
+          } catch (e) {
+            if (context.mounted) {
+              Navigator.pop(context); // Tutup loading dialog jika error
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Gagal memuat detail kelas: $e')),
+              );
+            }
+          }
+        } : null, // Jika null, card otomatis terkunci (tidak bisa diklik)
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20)),
-              child: Row(children: [
-                Icon(_statusIcon, size: 12, color: _statusColor),
-                const SizedBox(width: 5),
-                Text(booking.statusLabel,
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor)),
-              ])),
-            const Spacer(),
-            Text('${booking.jadwalDipilih}  -  ${booking.jamDipilih}',
-              style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-          ]),
-          const SizedBox(height: 10),
-          Text(booking.kelasJudul,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1565C0))),
-          Text('Tutor: ${booking.tutorNama}',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          const SizedBox(height: 4),
-          Text('Total: Rp${(booking.nominal / 1000).toStringAsFixed(0)}.000',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-
-          if (booking.status == 'rejected' && booking.alasanTolak != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red[200]!)),
-              child: Row(children: [
-                const Icon(Icons.info_outline, color: Colors.red, size: 14),
-                const SizedBox(width: 6),
-                Expanded(child: Text('Alasan: ${booking.alasanTolak}',
-                  style: TextStyle(fontSize: 11, color: Colors.red[700]))),
-              ])),
-          ],
-        ])),
-
-      Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFFEEEEEE)))),
-        child: Row(children: [
-          if (booking.status == 'confirmed' || booking.status == 'waiting_verification')
-            Expanded(child: TextButton.icon(
-              onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => ChatRoomScreen(
-                  peerUid:  booking.tutorId,
-                  peerNama: booking.tutorNama,
-                  peerRole: 'tutor',
-                  myRole:   'student'))),
-              icon: const Icon(Icons.chat_bubble_outline, size: 15),
-              label: const Text('Chat Tutor', style: TextStyle(fontSize: 12)),
-              style: TextButton.styleFrom(foregroundColor: const Color(0xFF1565C0)))),
-
-          if (onReview != null)
-            Expanded(child: TextButton.icon(
-              onPressed: onReview,
-              icon: const Icon(Icons.star_outline_rounded, size: 15, color: Color(0xFFFFC107)),
-              label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12)),
-              style: TextButton.styleFrom(foregroundColor: const Color(0xFFFFC107)))),
-
-          if (booking.status == 'completed' && booking.reviewed)
-            Expanded(child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.check_circle_rounded, size: 14, color: Colors.grey[400]),
-                const SizedBox(width: 4),
-                Text('Sudah Direview', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-              ]))),
-
           Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              tooltip: 'Laporkan',
-              onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => ReportScreen(
-                  targetUid:  booking.tutorId,
-                  targetNama: booking.tutorNama,
-                  targetRole: 'tutor',
-                  myRole:     'student'))),
-              icon: const Icon(Icons.flag_outlined, color: Colors.red, size: 18),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.red[50],
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))))),
-        ])),
-    ]));
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20)),
+                  child: Row(children: [
+                    Icon(_statusIcon, size: 12, color: _statusColor),
+                    const SizedBox(width: 5),
+                    Text(booking.statusLabel,
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor)),
+                  ])),
+                const Spacer(),
+                Text('${booking.jadwalDipilih}  -  ${booking.jamDipilih}',
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+              ]),
+              const SizedBox(height: 10),
+              Text(booking.kelasJudul,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1565C0))),
+              Text('Tutor: ${booking.tutorNama}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              const SizedBox(height: 4),
+              Text('Total: Rp${(booking.nominal / 1000).toStringAsFixed(0)}.000',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+
+              if (booking.status == 'rejected' && booking.alasanTolak != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red[200]!)),
+                  child: Row(children: [
+                    const Icon(Icons.info_outline, color: Colors.red, size: 14),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text('Alasan: ${booking.alasanTolak}',
+                      style: TextStyle(fontSize: 11, color: Colors.red[700]))),
+                  ])),
+              ],
+            ])),
+
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFFEEEEEE)))),
+            child: Row(children: [
+              if (booking.status == 'confirmed' || booking.status == 'waiting_verification')
+                Expanded(child: TextButton.icon(
+                  onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => ChatRoomScreen(
+                      peerUid:  booking.tutorId,
+                      peerNama: booking.tutorNama,
+                      peerRole: 'tutor',
+                      myRole:   'student'))),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 15),
+                  label: const Text('Chat Tutor', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF1565C0)))),
+
+              if (onReview != null)
+                Expanded(child: TextButton.icon(
+                  onPressed: onReview,
+                  icon: const Icon(Icons.star_outline_rounded, size: 15, color: Color(0xFFFFC107)),
+                  label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFFFC107)))),
+
+              if (booking.status == 'completed' && booking.reviewed)
+                Expanded(child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.check_circle_rounded, size: 14, color: Colors.grey[400]),
+                    const SizedBox(width: 4),
+                    Text('Sudah Direview', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                  ]))),
+
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: IconButton(
+                  tooltip: 'Laporkan',
+                  onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => ReportScreen(
+                      targetUid:  booking.tutorId,
+                      targetNama: booking.tutorNama,
+                      targetRole: 'tutor',
+                      myRole:     'student'))),
+                  icon: const Icon(Icons.flag_outlined, color: Colors.red, size: 18),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.red[50],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))))),
+            ])),
+        ]),
+      ),
+    );
+  }
 }

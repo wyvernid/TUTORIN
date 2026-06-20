@@ -94,7 +94,11 @@ class _State extends State<TutorDetailKelasScreen> {
               child: Text(k.isActive ? 'Tampil di Katalog' : 'Tersembunyi', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: k.isActive ? Colors.green[700] : Colors.grey[600]))),
           ]),
           const SizedBox(height: 8),
-          Row(children: [_chip(k.kategori), const SizedBox(width: 6), Text('${k.hargaFormatted}/sesi', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1565C0)))]),
+          Row(children: [
+            if (k.tags.isNotEmpty) _chip(k.tags.first),
+            if (k.tags.isNotEmpty) const SizedBox(width: 6),
+            Text('${k.hargaFormatted}/sesi', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1565C0))),
+          ]),
           if (k.deskripsi.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(k.deskripsi, style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.4)),

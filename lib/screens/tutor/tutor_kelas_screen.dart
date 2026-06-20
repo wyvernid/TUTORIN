@@ -106,7 +106,7 @@ class _KelasCardState extends State<_KelasCard> {
               const Icon(Icons.chevron_right_rounded, color: Color(0xFF78909C)),
             ]),
             const SizedBox(height: 6),
-            Row(children: [_chip(k.kategori), const SizedBox(width: 6), Text('Rp${(k.harga/1000).toStringAsFixed(0)}.000/sesi', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1565C0)))]),
+            Row(children: [Text('Rp${(k.harga/1000).toStringAsFixed(0)}.000/sesi', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1565C0)))]),
             const SizedBox(height: 6),
             Row(children: [const Icon(Icons.calendar_today_rounded, size: 12, color: Color(0xFF1565C0)), const SizedBox(width: 4),
               Text(k.pakaiJadwalSesi ? '${k.jadwalSesi.length} tanggal · ${k.totalSesi} sesi' : '${k.jadwal.join(", ")} · ${k.jamMulai} WIB', style: TextStyle(fontSize: 11, color: Colors.grey[600]))]),
@@ -157,5 +157,5 @@ class _KelasCardState extends State<_KelasCard> {
           }),
       ]));
   }
-  Widget _chip(String l) => Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: const Color(0xFF1565C0).withOpacity(0.1), borderRadius: BorderRadius.circular(20)), child: Text(l, style: const TextStyle(fontSize: 10, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)));
+  // Widget _chip(String l) => Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: const Color(0xFF1565C0).withOpacity(0.1), borderRadius: BorderRadius.circular(20)), child: Text(l, style: const TextStyle(fontSize: 10, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)));
 }

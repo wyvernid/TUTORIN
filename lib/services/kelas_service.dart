@@ -105,4 +105,18 @@ class KelasService {
       await _db.collection('users').doc(tutorId).update({'rating': avgTutor, 'jumlahUlasan': tutorUlasan.docs.length});
     }
   }
+
+  Future<KelasModel?> getKelasById(String kelasId) async {
+    try {
+      final doc = await _db.collection('kelas').doc(kelasId).get();
+      if (doc.exists && doc.data() != null) {
+        // Menggunakan fromMap sesuai dengan struktur model yang Anda miliki
+        return KelasModel.fromMap(doc.data()!, doc.id);
+      }
+    } catch (e) {
+      print("Error getKelasById: $e");
+    }
+    return null; // Mengembalikan null jika kelas tidak ditemukan atau error
+  }
+
 }
