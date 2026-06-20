@@ -91,6 +91,25 @@ class _LaporanCardState extends State<_LaporanCard> {
             const SizedBox(height: 8),
             Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFF5F7FA), borderRadius: BorderRadius.circular(10)),
               child: Text(l.deskripsi, style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.5))),
+            if (l.buktiUrl != null) ...[
+              const SizedBox(height: 10),
+              Text('Bukti dari ${l.fromNama}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey[600])),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => _FullImageViewer(imageUrl: l.buktiUrl!), fullscreenDialog: true)),
+                child: Container(width: double.infinity, height: 160,
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey[300]!)),
+                  child: Stack(fit: StackFit.expand, children: [
+                    ClipRRect(borderRadius: BorderRadius.circular(9),
+                      child: Image.network(l.buktiUrl!, fit: BoxFit.cover,
+                        loadingBuilder: (_, child, progress) => progress == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        errorBuilder: (_, __, ___) => Center(child: Icon(Icons.broken_image_rounded, color: Colors.grey[400])))),
+                    Positioned(right: 6, bottom: 6, child: Container(padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: Colors.black.withOpacity(0.55), borderRadius: BorderRadius.circular(6)),
+                      child: const Icon(Icons.zoom_in_rounded, size: 14, color: Colors.white))),
+                  ]))),
+            ],
             if (l.catatanAdmin != null) ...[
               const SizedBox(height: 8),
               Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.green[200]!)),
@@ -132,4 +151,48 @@ class _LaporanCardState extends State<_LaporanCard> {
           child: Text(action == 'resolve' ? 'Selesaikan' : 'Abaikan')),
       ]));
   }
+}
+
+/// Viewer fullscreen untuk bukti laporan, bisa di-zoom (pinch / double tap).
+class _FullImageViewer extends StatefulWidget {
+  final String imageUrl;
+  const _FullImageViewer({required this.imageUrl});
+  @override
+  State<_FullImageViewer> createState() => _FullImageViewerState();
+}
+
+class _FullImageViewerState extends State<_FullImageViewer> {
+  final _transformCtrl = TransformationController();
+  TapDownDetails? _doubleTapDetails;
+
+  void _onDoubleTap() {
+    final pos = _doubleTapDetails?.localPosition;
+    if (_transformCtrl.value != Matrix4.identity()) {
+      _transformCtrl.value = Matrix4.identity();
+    } else if (pos != null) {
+      _transformCtrl.value = Matrix4.identity()
+        ..translate(-pos.dx * 2, -pos.dy * 2)
+        ..scale(3.0);
+    }
+  }
+
+  @override
+  void dispose() { _transformCtrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(backgroundColor: Colors.black, elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.white),
+      title: const Text('Bukti Laporan', style: TextStyle(color: Colors.white, fontSize: 14))),
+    body: GestureDetector(
+      onDoubleTapDown: (d) => _doubleTapDetails = d,
+      onDoubleTap: _onDoubleTap,
+      child: InteractiveViewer(
+        transformationController: _transformCtrl,
+        minScale: 1, maxScale: 5,
+        child: Center(child: Image.network(widget.imageUrl, fit: BoxFit.contain,
+          loadingBuilder: (context, child, progress) => progress == null ? child : const Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: Colors.white)),
+          errorBuilder: (context, error, stack) => const Padding(padding: EdgeInsets.all(24), child: Text('Gagal memuat gambar', style: TextStyle(color: Colors.white)))))),
+    ));
 }

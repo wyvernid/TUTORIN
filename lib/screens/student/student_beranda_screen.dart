@@ -179,22 +179,40 @@ class _KelasCard extends StatelessWidget {
           Text('Tutor: ${kelas.tutorNama}',
             style: TextStyle(fontSize: 11, color: Colors.grey[600])),
           const SizedBox(height: 6),
-          Row(children: [
-            ...kelas.jadwal.take(3).map((s) => Container(
-              margin: const EdgeInsets.only(right: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1565C0).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6)),
-              child: Text(s, style: const TextStyle(
-                fontSize: 9, fontWeight: FontWeight.w600, color: Color(0xFF1565C0))))),
-            if (kelas.jadwal.length > 3)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(6)),
-                child: Text('+${kelas.jadwal.length - 3}',
-                    style: TextStyle(fontSize: 9, color: Colors.grey[600]))),
-          ]),
+          Row(children: kelas.pakaiJadwalSesi
+              ? [
+                  Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1565C0).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6)),
+                    child: Text('${kelas.jadwalSesi.length} tanggal', style: const TextStyle(
+                      fontSize: 9, fontWeight: FontWeight.w600, color: Color(0xFF1565C0)))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1565C0).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6)),
+                    child: Text('${kelas.totalSesi} sesi', style: const TextStyle(
+                      fontSize: 9, fontWeight: FontWeight.w600, color: Color(0xFF1565C0)))),
+                ]
+              : [
+                  ...kelas.jadwal.take(3).map((s) => Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1565C0).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6)),
+                    child: Text(s, style: const TextStyle(
+                      fontSize: 9, fontWeight: FontWeight.w600, color: Color(0xFF1565C0))))),
+                  if (kelas.jadwal.length > 3)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(6)),
+                      child: Text('+${kelas.jadwal.length - 3}',
+                          style: TextStyle(fontSize: 9, color: Colors.grey[600]))),
+                ]),
           const SizedBox(height: 5),
           if (kelas.lokasi.isNotEmpty)
             Row(children: [

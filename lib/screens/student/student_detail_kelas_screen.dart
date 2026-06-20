@@ -50,7 +50,26 @@ class StudentDetailKelasScreen extends StatelessWidget {
           _row(Icons.attach_money_rounded, '${kelas.hargaFormatted} / sesi'),
           const SizedBox(height: 6),
           _row(Icons.calendar_today_rounded,
-              '${kelas.jadwal.join(', ')}  ·  ${kelas.jamMulai} WIB'),
+              kelas.pakaiJadwalSesi
+                  ? '${kelas.jadwalSesi.length} tanggal  ·  ${kelas.totalSesi} sesi tersedia'
+                  : '${kelas.jadwal.join(', ')}  ·  ${kelas.jamMulai} WIB'),
+          if (kelas.pakaiJadwalSesi) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: const Color(0xFFF5F7FA), borderRadius: BorderRadius.circular(10)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: kelas.jadwalSesi.map((j) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(flex: 2, child: Text(j.tanggalFormatted,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+                    Expanded(flex: 3, child: Text('${j.jamList.map((t) => "$t WIB").join(", ")}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]))),
+                  ]))).toList()),
+            ),
+          ],
           const SizedBox(height: 6),
           _row(Icons.wifi_rounded,
               kelas.mode == 'online' ? 'Online'

@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../../services/kelas_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/kelas_model.dart';
+import '../../models/jadwal_sesi_model.dart';
 import '../shared/peta_lokasi_screen.dart';
 
 class TutorTambahKelasScreen extends StatefulWidget {
@@ -19,15 +20,17 @@ class _State extends State<TutorTambahKelasScreen> {
   final _price = TextEditingController(), _loc = TextEditingController();
   final _service = KelasService(); final _auth = AuthService();
   int _quota = 10; String _duration = '1 jam', _mode = 'offline';
-  String? _category; final Set<String> _days = {};
-  TimeOfDay _time = const TimeOfDay(hour: 18, minute: 0);
+  String? _category;
   double? _lat, _lng;
   bool _loading = false;
   final List<String> _tags = [];
   final _tagCtrl = TextEditingController();
 
+  /// Daftar jadwal kalender: tiap entri = satu tanggal + daftar jam sesinya.
+  /// Diurutkan otomatis berdasarkan tanggal setiap kali ditambah.
+  final List<JadwalSesi> _jadwalSesi = [];
+
   final _categories = ['Algoritma','Basda','Jarkom','PBO','Machine Learning','Mobile Dev','Lainnya'];
-  final _dayList = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
   final _durations = ['30 menit','1 jam','1.5 jam','2 jam'];
 
   bool get _isEdit => widget.kelas != null;
@@ -45,24 +48,76 @@ class _State extends State<TutorTambahKelasScreen> {
       _duration = _durations.contains(k.durasi) ? k.durasi : '1 jam';
       _mode = k.mode;
       _category = _categories.contains(k.kategori) ? k.kategori : null;
-      _days.addAll(k.jadwal);
       _tags.addAll(k.tags);
       _lat = k.latitude;
       _lng = k.longitude;
-      final parts = k.jamMulai.split('.');
-      if (parts.length == 2) {
-        _time = TimeOfDay(hour: int.tryParse(parts[0]) ?? 18, minute: int.tryParse(parts[1]) ?? 0);
+      if (k.jadwalSesi.isNotEmpty) {
+        _jadwalSesi.addAll(k.jadwalSesi);
       }
     }
   }
 
+  void _tambahTanggal() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: 'Pilih Tanggal Kelas',
+    );
+    if (picked == null) return;
+    final tglOnly = DateTime(picked.year, picked.month, picked.day);
+    final existingIdx = _jadwalSesi.indexWhere((j) =>
+        j.tanggal.year == tglOnly.year && j.tanggal.month == tglOnly.month && j.tanggal.day == tglOnly.day);
+    if (existingIdx != -1) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tanggal ini sudah ditambahkan, tambahkan jam di kartu yang sudah ada')));
+      return;
+    }
+    setState(() {
+      _jadwalSesi.add(JadwalSesi(tanggal: tglOnly, jamList: []));
+      _jadwalSesi.sort((a, b) => a.tanggal.compareTo(b.tanggal));
+    });
+  }
+
+  void _tambahJam(int idx) async {
+    final t = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 14, minute: 0), helpText: 'Pilih Jam Sesi');
+    if (t == null) return;
+    final jamStr = '${t.hour.toString().padLeft(2, "0")}:${t.minute.toString().padLeft(2, "0")}';
+    setState(() {
+      final j = _jadwalSesi[idx];
+      if (j.jamList.contains(jamStr)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jam ini sudah ada di tanggal tersebut')));
+        return;
+      }
+      final newJamList = [...j.jamList, jamStr]..sort();
+      _jadwalSesi[idx] = JadwalSesi(tanggal: j.tanggal, jamList: newJamList);
+    });
+  }
+
+  void _hapusJam(int idx, String jam) {
+    setState(() {
+      final j = _jadwalSesi[idx];
+      final newJamList = j.jamList.where((x) => x != jam).toList();
+      _jadwalSesi[idx] = JadwalSesi(tanggal: j.tanggal, jamList: newJamList);
+    });
+  }
+
+  void _hapusTanggal(int idx) {
+    setState(() => _jadwalSesi.removeAt(idx));
+  }
+
   void _save() async {
-    if (_title.text.isEmpty || _category == null || _days.isEmpty || _price.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lengkapi semua field wajib'))); return;
+    final adaJamKosong = _jadwalSesi.any((j) => j.jamList.isEmpty);
+    if (_title.text.isEmpty || _category == null || _jadwalSesi.isEmpty || _price.text.isEmpty || adaJamKosong) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+        _jadwalSesi.isEmpty ? 'Tambahkan minimal 1 tanggal kelas'
+          : adaJamKosong ? 'Setiap tanggal harus punya minimal 1 jam sesi'
+          : 'Lengkapi semua field wajib')));
+      return;
     }
     setState(() => _loading = true);
     try {
-      final jamMulai = '${_time.hour}.${_time.minute.toString().padLeft(2, "0")}';
       final harga = int.tryParse(_price.text.replaceAll('.','')) ?? 0;
       if (!_isEdit) {
         final user = FirebaseAuth.instance.currentUser!;
@@ -70,7 +125,7 @@ class _State extends State<TutorTambahKelasScreen> {
         final kelas = KelasModel(id: '', tutorId: user.uid, tutorNama: userData?.nama ?? user.displayName ?? '',
           tutorFotoUrl: userData?.fotoUrl ?? '', judul: _title.text.trim(), deskripsi: _desc.text.trim(),
           kategori: _category!, harga: harga, kuota: _quota,
-          jadwal: _days.toList(), jamMulai: jamMulai,
+          jadwalSesi: _jadwalSesi,
           durasi: _duration, mode: _mode, lokasi: _loc.text.trim(), tags: _tags,
           latitude: _lat ?? -7.9839, longitude: _lng ?? 113.6684, createdAt: DateTime.now());
         await _service.tambahKelas(kelas);
@@ -80,7 +135,8 @@ class _State extends State<TutorTambahKelasScreen> {
       } else {
         await _service.updateKelas(widget.kelas!.id, {
           'judul': _title.text.trim(), 'deskripsi': _desc.text.trim(), 'kategori': _category!,
-          'harga': harga, 'kuota': _quota, 'jadwal': _days.toList(), 'jamMulai': jamMulai,
+          'harga': harga, 'kuota': _quota,
+          'jadwalSesi': _jadwalSesi.map((j) => j.toMap()).toList(),
           'durasi': _duration, 'mode': _mode, 'lokasi': _loc.text.trim(), 'tags': _tags,
           'latitude': _lat ?? widget.kelas!.latitude, 'longitude': _lng ?? widget.kelas!.longitude,
         });
@@ -129,20 +185,65 @@ class _State extends State<TutorTambahKelasScreen> {
           IconButton(onPressed: () => setState(() => _quota++), icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF1565C0)), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
         ]),
         const SizedBox(height: 10),
-        DropdownButtonFormField<String>(value: _duration, decoration: InputDecoration(labelText: 'Durasi', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), filled: true, fillColor: const Color(0xFFF5F7FA)),
+        DropdownButtonFormField<String>(value: _duration, decoration: InputDecoration(labelText: 'Durasi per sesi', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), filled: true, fillColor: const Color(0xFFF5F7FA)),
           items: _durations.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(), onChanged: (v) => setState(() => _duration = v!)),
       ]),
       const SizedBox(height: 10),
       _card([
-        const Text('Jadwal *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: _dayList.map((d) { final s = _days.contains(d); return GestureDetector(onTap: () => setState(() { if (s) _days.remove(d); else _days.add(d); }), child: AnimatedContainer(duration: const Duration(milliseconds: 200), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), decoration: BoxDecoration(color: s ? const Color(0xFF1565C0) : Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: s ? const Color(0xFF1565C0) : Colors.grey[300]!)), child: Text(d, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: s ? Colors.white : Colors.grey[700])))); }).toList()),
-        const SizedBox(height: 12),
-        ListTile(contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.access_time_rounded, color: Color(0xFF1565C0)),
-          title: Text('Jam: ${_time.hour}:${_time.minute.toString().padLeft(2, "0")} WIB', style: const TextStyle(fontSize: 13)),
-          trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-          onTap: () async { final t = await showTimePicker(context: context, initialTime: _time); if (t != null) setState(() => _time = t); }),
+        Row(children: [
+          const Expanded(child: Text('Jadwal Kelas *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700))),
+          TextButton.icon(onPressed: _tambahTanggal, icon: const Icon(Icons.add_circle_rounded, size: 16),
+            label: const Text('Tambah Tanggal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF1565C0), padding: EdgeInsets.zero)),
+        ]),
+        const SizedBox(height: 2),
+        Text('Pilih tanggal di kalender, lalu tambahkan satu atau lebih jam sesi untuk tanggal tersebut.',
+          style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+        const SizedBox(height: 10),
+        if (_jadwalSesi.isEmpty)
+          Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 20),
+            decoration: BoxDecoration(color: const Color(0xFFF5F7FA), borderRadius: BorderRadius.circular(12)),
+            child: Column(children: [
+              Icon(Icons.calendar_today_rounded, size: 28, color: Colors.grey[400]),
+              const SizedBox(height: 6),
+              Text('Belum ada tanggal ditambahkan', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            ]))
+        else
+          ..._jadwalSesi.asMap().entries.map((entry) {
+            final idx = entry.key; final j = entry.value;
+            return Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFF5F7FA), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF1565C0)),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(j.tanggalFormatted, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+                  GestureDetector(onTap: () => _hapusTanggal(idx),
+                    child: Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red[400])),
+                ]),
+                const SizedBox(height: 8),
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  ...j.jamList.map((jam) => Chip(
+                    label: Text('$jam WIB', style: const TextStyle(fontSize: 11)),
+                    backgroundColor: const Color(0xFF1565C0).withOpacity(0.1),
+                    deleteIcon: const Icon(Icons.close, size: 13),
+                    onDeleted: () => _hapusJam(idx, jam),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact)),
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 14, color: Color(0xFF1565C0)),
+                    label: const Text('Tambah Jam', style: TextStyle(fontSize: 11, color: Color(0xFF1565C0))),
+                    onPressed: () => _tambahJam(idx),
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFF1565C0)),
+                    visualDensity: VisualDensity.compact),
+                ]),
+                if (j.jamList.isEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('Belum ada jam, tambahkan minimal 1', style: TextStyle(fontSize: 10, color: Colors.red[400])),
+                ],
+              ]));
+          }),
       ]),
       const SizedBox(height: 10),
       _card([
@@ -158,14 +259,15 @@ class _State extends State<TutorTambahKelasScreen> {
         if (_mode != 'online') ...[const SizedBox(height: 10), _f('Lokasi / Alamat', _loc, hint: 'Jln. Kalimantan No.37', icon: Icons.location_on_rounded),
           const SizedBox(height: 8),
           OutlinedButton.icon(onPressed: () async {
-            final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const PetaLokasiScreen(pickMode: true)));
-            if (result != null) {
-              final latlng = result['latlng'] as LatLng;
+            final result = await Navigator.push<Map<String, dynamic>>(context, MaterialPageRoute(builder: (_) => const PetaLokasiScreen(pickMode: true)));
+            if (result != null && result['latlng'] != null) {
+              final pos = result['latlng'] as LatLng;
               final alamat = result['alamat'] as String?;
               setState(() {
-                _lat = latlng.latitude;
-                _lng = latlng.longitude;
-                _loc.text = alamat ?? 'Lat: ${latlng.latitude.toStringAsFixed(5)}, Lng: ${latlng.longitude.toStringAsFixed(5)}';
+                _lat = pos.latitude; _lng = pos.longitude;
+                _loc.text = (alamat != null && alamat.isNotEmpty && alamat != 'Alamat tidak ditemukan' && alamat != 'Gagal memuat alamat')
+                    ? alamat
+                    : 'Lat: ${pos.latitude.toStringAsFixed(5)}, Lng: ${pos.longitude.toStringAsFixed(5)}';
               });
             }
           }, icon: const Icon(Icons.map_rounded, size: 16), label: Text(_lat != null ? 'Lokasi dipilih ✓' : 'Pilih di Peta'),

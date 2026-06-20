@@ -25,11 +25,28 @@ class _State extends State<StudentBookingScreen> {
   final List<String> _bookingIds = [];
 
   List<Map<String, String>> get _dates {
-    const dayNums = {'Senin':1,'Selasa':2,'Rabu':3,'Kamis':4,'Jumat':5,'Sabtu':6,'Minggu':7};
-    const months  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    final now = DateTime.now();
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const hari   = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
     final result = <Map<String,String>>[];
 
+    if (widget.kelas.pakaiJadwalSesi) {
+      // Skema baru: tanggal kalender spesifik, bisa beberapa jam per tanggal.
+      for (final sesi in widget.kelas.jadwalSesi) {
+        final d = sesi.tanggal;
+        for (final jam in sesi.jamList) {
+          result.add({
+            'day':  hari[d.weekday - 1],
+            'date': '${d.day} ${months[d.month - 1]} ${d.year}',
+            'time': jam,
+          });
+        }
+      }
+      return result;
+    }
+
+    // Fallback skema lama: hari berulang + 1 jam tunggal (kelas yang belum diedit).
+    const dayNums = {'Senin':1,'Selasa':2,'Rabu':3,'Kamis':4,'Jumat':5,'Sabtu':6,'Minggu':7};
+    final now = DateTime.now();
     for (final day in widget.kelas.jadwal) {
       final target = dayNums[day] ?? 1;
       for (int w = 0; w < 4; w++) {

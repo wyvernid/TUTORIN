@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:url_launcher/url_launcher.dart';
+import '../shared/pdf_viewer_screen.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/storage_service.dart';
 
@@ -53,22 +54,47 @@ class _State extends State<TutorUploadCvScreen> {
     }
   }
 
+  // Future<void> _bukaCvRemote() async {
+  //   if (_existingCvUrl == null) return;
+  //   final url = Uri.parse(_existingCvUrl!);
+  //   try {
+  //     if (await canLaunchUrl(url)) {
+  //       await launchUrl(url, mode: LaunchMode.externalApplication);
+  //     } else {
+  //       throw 'Tidak bisa membuka tautan';
+  //     }
+  //   } catch (e) {
+  //     if (!mounted) return;
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Gagal membuka file: $e'), backgroundColor: Colors.red),
+  //     );
+  //   }
+  // }
+
   Future<void> _bukaCvRemote() async {
-    if (_existingCvUrl == null) return;
-    final url = Uri.parse(_existingCvUrl!);
-    try {
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Tidak bisa membuka tautan';
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal membuka file: $e'), backgroundColor: Colors.red),
-      );
-    }
+  if (_existingCvUrl == null) return;
+
+  try {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PdfViewerScreen(
+          pdfUrl: _existingCvUrl!,
+          title: 'Curriculum Vitae',
+        ),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Gagal membuka CV: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   Future<void> _bukaCvLokal() async {
     if (_pdfFile == null) return;
