@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/admin_service.dart';
+import 'admin_tutor_detail_screen.dart';
 
 class AdminTutorScreen extends StatefulWidget {
   const AdminTutorScreen({super.key});
@@ -14,6 +15,54 @@ class _State extends State<AdminTutorScreen> with SingleTickerProviderStateMixin
   void initState() { super.initState(); _tab = TabController(length: 2, vsync: this); }
   @override
   void dispose() { _tab.dispose(); super.dispose(); }
+
+  Future<void> _tolak(String uid, String nama) async {
+    final alasanCtrl = TextEditingController();
+    final konfirmasi = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Tolak $nama?'),
+        content: TextField(
+          controller: alasanCtrl,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            hintText: 'Alasan penolakan (opsional)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+              child: const Text('Tolak', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (konfirmasi != true) return;
+
+    try {
+      await _service.tolakTutor(uid, alasan: alasanCtrl.text.trim().isEmpty ? null : alasanCtrl.text.trim());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$nama ditolak'), backgroundColor: Colors.red));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menolak $nama: $e'), backgroundColor: Colors.red[900]));
+    }
+  }
+
+  Future<void> _setujui(String uid, String nama) async {
+    try {
+      await _service.verifikasiTutor(uid);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$nama berhasil diverifikasi!'), backgroundColor: Colors.green));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memverifikasi $nama: $e'), backgroundColor: Colors.red[900]));
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -33,6 +82,10 @@ class _State extends State<AdminTutorScreen> with SingleTickerProviderStateMixin
   Widget _buildPending() => StreamBuilder<List<Map<String,dynamic>>>(
     stream: _service.streamTutorPending(),
     builder: (_, snap) {
+      if (snap.hasError) {
+        return Center(child: Padding(padding: const EdgeInsets.all(20),
+          child: Text('Gagal memuat data: ${snap.error}', textAlign: TextAlign.center, style: const TextStyle(color: Colors.red))));
+      }
       if (!snap.hasData) return const Center(child: CircularProgressIndicator());
       final list = snap.data!;
       if (list.isEmpty) return const Center(child: Text('Tidak ada tutor pending', style: TextStyle(color: Colors.grey)));
@@ -40,7 +93,10 @@ class _State extends State<AdminTutorScreen> with SingleTickerProviderStateMixin
         itemBuilder: (_, i) {
           final t = list[i];
           final keahlian = List<String>.from(t['keahlian'] ?? []);
-          return Container(margin: const EdgeInsets.only(bottom: 12),
+          return InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TutorDetailScreen(tutor: t))),
+            child: Container(margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.orange[100]!),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
@@ -67,28 +123,33 @@ class _State extends State<AdminTutorScreen> with SingleTickerProviderStateMixin
               ])),
               Container(decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFEEEEEE))), borderRadius: BorderRadius.vertical(bottom: Radius.circular(16))),
                 child: Row(children: [
-                  Expanded(child: TextButton.icon(onPressed: () => _service.tolakTutor(t['uid']),
+                  Expanded(child: TextButton.icon(onPressed: () => _tolak(t['uid'], t['nama'] ?? ''),
                     icon: const Icon(Icons.close_rounded, size: 15, color: Colors.red), label: const Text('Tolak', style: TextStyle(color: Colors.red, fontSize: 12)))),
                   Container(width: 0.5, height: 38, color: Colors.grey[200]),
-                  Expanded(child: TextButton.icon(onPressed: () async {
-                    await _service.verifikasiTutor(t['uid']);
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${t["nama"]} berhasil diverifikasi!'), backgroundColor: Colors.green));
-                  }, icon: const Icon(Icons.verified_user_rounded, size: 15, color: Colors.green), label: const Text('Setujui', style: TextStyle(color: Colors.green, fontSize: 12)))),
+                  Expanded(child: TextButton.icon(onPressed: () => _setujui(t['uid'], t['nama'] ?? ''),
+                    icon: const Icon(Icons.verified_user_rounded, size: 15, color: Colors.green), label: const Text('Setujui', style: TextStyle(color: Colors.green, fontSize: 12)))),
                 ])),
-            ]));
+            ])));
         });
     });
 
   Widget _buildVerified() => StreamBuilder<List<Map<String,dynamic>>>(
     stream: _service.streamTutorVerified(),
     builder: (_, snap) {
+      if (snap.hasError) {
+        return Center(child: Padding(padding: const EdgeInsets.all(20),
+          child: Text('Gagal memuat data: ${snap.error}', textAlign: TextAlign.center, style: const TextStyle(color: Colors.red))));
+      }
       if (!snap.hasData) return const Center(child: CircularProgressIndicator());
       final list = snap.data!;
       if (list.isEmpty) return const Center(child: Text('Belum ada tutor terverifikasi', style: TextStyle(color: Colors.grey)));
       return ListView.builder(padding: const EdgeInsets.all(14), itemCount: list.length,
         itemBuilder: (_, i) {
           final t = list[i];
-          return Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
+          return InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TutorDetailScreen(tutor: t))),
+            child: Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 5)]),
             child: Row(children: [
@@ -105,10 +166,21 @@ class _State extends State<AdminTutorScreen> with SingleTickerProviderStateMixin
                   _mini(Icons.star_rounded, '${(t["rating"] ?? 0.0).toStringAsFixed(1)}', color: Colors.amber),
                 ]),
               ])),
-              PopupMenuButton<String>(onSelected: (v) { if (v == 'suspend') _service.suspendUser(t['uid']); },
+              PopupMenuButton<String>(onSelected: (v) async {
+                try {
+                  if (v == 'suspend') await _service.suspendUser(t['uid']);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Tutor disuspend'), backgroundColor: Colors.red));
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red[900]));
+                }
+              },
                 itemBuilder: (_) => [const PopupMenuItem(value: 'suspend', child: Text('Suspend'))],
                 child: const Icon(Icons.more_vert_rounded, color: Color(0xFF78909C))),
-            ]));
+            ])));
         });
     });
 

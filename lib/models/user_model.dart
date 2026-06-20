@@ -7,6 +7,12 @@ class UserModel {
   final bool isVerified, isSuspended;
   final double rating;
 
+  // ── BARU: status penolakan tutor (false = belum pernah ditolak / sudah
+  // daftar ulang) — dipakai supaya tutor yang ditolak admin bisa "Daftar
+  // Ulang" pakai akun (uid) yang sama, tanpa harus bikin akun Auth baru ──
+  final bool isRejected;
+  final String? alasanTolak;
+
   // ── BARU: info rekening tutor (semua nullable — opsional & untuk backward compat) ──
   final String? namaBank;       // contoh: 'BCA', 'Mandiri', 'GoPay'
   final String? nomorRekening;  // contoh: '1234567890'
@@ -31,6 +37,8 @@ class UserModel {
     this.isSuspended = false,
     this.rating = 0.0,
     // ── BARU ──
+    this.isRejected = false,
+    this.alasanTolak,
     this.namaBank,
     this.nomorRekening,
     this.namaRekening,
@@ -62,6 +70,8 @@ class UserModel {
         isSuspended: m["isSuspended"] ?? false,
         rating: (m["rating"] ?? 0.0).toDouble(),
         // ── BARU ──
+        isRejected: m["isRejected"] ?? false,
+        alasanTolak: m["alasanTolak"],
         namaBank: m["namaBank"],
         nomorRekening: m["nomorRekening"],
         namaRekening: m["namaRekening"],
@@ -84,6 +94,8 @@ class UserModel {
         "isVerified": isVerified,
         "isSuspended": isSuspended,
         "rating": rating,
+        "isRejected": isRejected,
+        "alasanTolak": alasanTolak,
         "namaBank": namaBank,
         "nomorRekening": nomorRekening,
         "namaRekening": namaRekening,
