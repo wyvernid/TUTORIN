@@ -1,10 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../models/notifikasi_model.dart';
+import 'notifikasi_service.dart';
 
 class AuthService {
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
+  final _notif = NotifikasiService();
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authState => _auth.authStateChanges();
@@ -22,6 +25,26 @@ class AuthService {
     // emailVerified dilakukan terpisah di LoginScreen/SplashScreen sebelum
     // user diizinkan masuk ke halaman utama.
     await cred.user!.sendEmailVerification();
+
+    // ── BARU: kabari semua admin kalau yang baru daftar adalah tutor,
+    // supaya admin tahu ada pendaftaran yang perlu diverifikasi.
+    // (student tidak perlu verifikasi admin, jadi tidak dikirim notif)
+    // Dibungkus try-catch: akun sudah berhasil dibuat di atas, jadi kalau
+    // notif gagal terkirim, register() TETAP harus dianggap berhasil.
+    if (role == 'tutor') {
+      try {
+        await _notif.kirimKeSemuaAdmin(
+          tipe: NotifikasiTipe.tutorMendaftar,
+          judul: 'Tutor baru mendaftar',
+          pesan: '$nama mendaftar sebagai tutor dan menunggu verifikasi.',
+          refId: user.uid,
+          refType: 'tutor',
+        );
+      } catch (e) {
+        print('Gagal kirim notifikasi tutor mendaftar: $e');
+      }
+    }
+
     return user;
   }
 
