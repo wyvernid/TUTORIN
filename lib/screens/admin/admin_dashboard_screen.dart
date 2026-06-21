@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/admin_service.dart';
 import '../../services/laporan_service.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import '../shared/notifikasi_badged_icon.dart';
 
 /// FIX: sebelumnya class ini StatelessWidget dan membuat AdminService() +
 /// stream baru di setiap build(). Setiap kali parent (AdminHomeScreen)
@@ -24,6 +26,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _adminService = AdminService();
   final _laporanService = LaporanService();
+  late final String _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   // Stream dibuat sekali saja & dipakai terus selama widget hidup.
   late final Stream<String> _totalStudentStream =
@@ -173,11 +176,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ]),
           const Text('TutorIn Admin Panel', style: TextStyle(color: Colors.white70, fontSize: 12)),
         ])),
-        Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-            child: const Icon(Icons.notifications_rounded, color: Colors.white, size: 22)),
+        NotifikasiBadgeIcon(uid: _uid, role: 'admin', circleBackground: true, size: 42),
         const SizedBox(width: 10),
         GestureDetector(
           onTap: () => _confirmLogout(context),

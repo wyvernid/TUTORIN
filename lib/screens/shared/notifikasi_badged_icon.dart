@@ -3,21 +3,43 @@ import '../../services/notifikasi_service.dart';
 import 'notifikasi_list_screen.dart';
 
 /// Icon lonceng notifikasi + badge angka belum dibaca.
-/// Pasang di `actions: [...]` AppBar tiap home screen (Student/Tutor/Admin).
 ///
-/// Contoh pakai di student_home_screen.dart / tutor_home_screen.dart / admin_home_screen.dart:
+/// Punya 2 mode tampilan lewat parameter [circleBackground]:
+/// - `false` (default) → IconButton polos, dipasang di `actions: [...]` AppBar biasa.
+/// - `true`            → dibungkus lingkaran putih transparan, dipakai di
+///                        header custom (Container biru rounded) seperti di
+///                        Student/Tutor/Admin Beranda yang BUKAN AppBar.
+///
+/// Contoh pakai di AppBar:
 /// ```dart
-/// import '../shared/notifikasi_badge_icon.dart';
-///
 /// appBar: AppBar(
 ///   title: const Text('TutorIn'),
 ///   actions: [NotifikasiBadgeIcon(uid: myUid, role: 'student')],
 /// ),
 /// ```
+///
+/// Contoh pakai di header custom (lingkaran):
+/// ```dart
+/// NotifikasiBadgeIcon(
+///   uid: myUid,
+///   role: 'tutor',
+///   circleBackground: true,
+///   size: 44,
+/// ),
+/// ```
 class NotifikasiBadgeIcon extends StatelessWidget {
   final String uid;
   final String role; // 'student' | 'tutor' | 'admin'
-  const NotifikasiBadgeIcon({super.key, required this.uid, required this.role});
+  final bool circleBackground;
+  final double size;
+
+  const NotifikasiBadgeIcon({
+    super.key,
+    required this.uid,
+    required this.role,
+    this.circleBackground = false,
+    this.size = 44,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,21 +48,31 @@ class NotifikasiBadgeIcon extends StatelessWidget {
       stream: service.streamJumlahBelumDibaca(uid),
       builder: (context, snap) {
         final jumlah = snap.data ?? 0;
+
+        final lonceng = circleBackground
+            ? GestureDetector(
+                onTap: () => _bukaDaftar(context),
+                child: Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  child: Icon(Icons.notifications_rounded, color: Colors.white, size: size * 0.5),
+                ),
+              )
+            : IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                tooltip: 'Notifikasi',
+                onPressed: () => _bukaDaftar(context),
+              );
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              tooltip: 'Notifikasi',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => NotifikasiListScreen(uid: uid, role: role)),
-              ),
-            ),
+            lonceng,
             if (jumlah > 0)
               Positioned(
-                right: 6,
-                top: 6,
+                right: circleBackground ? -2 : 6,
+                top: circleBackground ? -2 : 6,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
@@ -57,4 +89,9 @@ class NotifikasiBadgeIcon extends StatelessWidget {
       },
     );
   }
+
+  void _bukaDaftar(BuildContext context) => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => NotifikasiListScreen(uid: uid, role: role)),
+      );
 }

@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../models/booking_model.dart';
 import '../../models/user_model.dart';
 import 'tutor_verifikasi_pembayaran_screen.dart';
+import '../shared/notifikasi_badged_icon.dart';
 
 class TutorBerandaScreen extends StatefulWidget {
   const TutorBerandaScreen({super.key});
@@ -169,8 +170,7 @@ class _State extends State<TutorBerandaScreen> {
         const Row(children: [Text('Hi Tutor ', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)), Text('🎓', style: TextStyle(fontSize: 20))]),
         const Text('Dashboard Pengajar', style: TextStyle(color: Colors.white70, fontSize: 13)),
       ])),
-      Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-        child: const Icon(Icons.notifications_rounded, color: Colors.white, size: 22)),
+      NotifikasiBadgeIcon(uid: _uid, role: 'tutor', circleBackground: true),
     ]));
 
   Widget _buildStats() {

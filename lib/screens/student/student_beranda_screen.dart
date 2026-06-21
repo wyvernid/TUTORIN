@@ -4,6 +4,7 @@ import '../../services/kelas_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/kelas_model.dart';
 import 'student_detail_kelas_screen.dart';
+import '../shared/notifikasi_badged_icon.dart';
 
 class StudentBerandaScreen extends StatefulWidget {
   const StudentBerandaScreen({super.key});
@@ -18,6 +19,7 @@ class _State extends State<StudentBerandaScreen> {
   String _selectedTag = 'Semua'; // 'Semua' = tidak ada filter tag
   String _search      = '';
   String _namaUser    = '';
+  late final String _uid;
 
   /// Tag populer: 'Semua' + tag yang paling sering muncul di kelas aktif.
   /// Diisi setelah data kelas pertama kali diterima.
@@ -26,6 +28,7 @@ class _State extends State<StudentBerandaScreen> {
   @override
   void initState() {
     super.initState();
+    _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     _loadNama();
   }
 
@@ -171,14 +174,7 @@ class _State extends State<StudentBerandaScreen> {
                 const Text('Lets Start Learning',
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
               ])),
-          Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle),
-              child: const Icon(Icons.notifications_rounded,
-                  color: Colors.white, size: 24)),
+          NotifikasiBadgeIcon(uid: _uid, role: 'student', circleBackground: true),
         ]),
         const SizedBox(height: 16),
         Container(
