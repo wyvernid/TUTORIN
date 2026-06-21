@@ -11,7 +11,11 @@ import '../../services/storage_service.dart';
 
 class StudentBookingScreen extends StatefulWidget {
   final KelasModel kelas;
-  const StudentBookingScreen({super.key, required this.kelas});
+  // BARU: kalau diisi, berarti melanjutkan booking yang SUDAH ADA di Firestore
+  // (status waiting_payment) — alur akan skip pilih jadwal dan langsung ke
+  // step pembayaran, tanpa membuat record booking baru.
+  final BookingModel? existingBooking;
+  const StudentBookingScreen({super.key, required this.kelas, this.existingBooking});
   @override
   State<StudentBookingScreen> createState() => _State();
 }
@@ -27,6 +31,10 @@ class _State extends State<StudentBookingScreen> {
   bool   _loading = false;
   File?  _buktiBayar;
   final List<String> _bookingIds = [];
+  bool _bookingSelesai = false;
+
+  // BARU: true kalau screen ini dipakai buat melanjutkan booking lama, bukan bikin baru
+  bool get _isResuming => widget.existingBooking != null;
 
   // ── BARU: data profil tutor untuk rekening ──
   UserModel? _tutorData;
@@ -35,6 +43,10 @@ class _State extends State<StudentBookingScreen> {
   @override
   void initState() {
     super.initState();
+    if (_isResuming) {
+      _bookingIds.add(widget.existingBooking!.id);
+      _step = 2; // langsung ke step pembayaran, jadwal sudah pernah dipilih sebelumnya
+    }
     _loadTutorData();
   }
 
@@ -89,7 +101,7 @@ class _State extends State<StudentBookingScreen> {
     return result;
   }
 
-  int get _totalBayar => widget.kelas.harga * _selectedIdx.length;
+  int get _totalBayar => _isResuming ? widget.existingBooking!.nominal : widget.kelas.harga * _selectedIdx.length;
   String get _totalBayarFormatted {
     final s = _totalBayar.toString();
     final buf = StringBuffer();
@@ -126,6 +138,21 @@ class _State extends State<StudentBookingScreen> {
     }
   }
 
+  /// Batalkan (hapus) booking yang baru saja dibuat di sesi ini tapi belum
+  /// selesai dibayar. TIDAK berlaku saat _isResuming — booking lama yang
+  /// sedang dilanjutkan TIDAK boleh otomatis terhapus hanya karena user
+  /// keluar dari layar ini; penghapusan booking lama hanya lewat tombol
+  /// "Batalkan" eksplisit di tab Kelas.
+  Future<void> _batalkanBookingPending() async {
+    if (_isResuming || _bookingSelesai || _bookingIds.isEmpty) return;
+    for (final id in List<String>.from(_bookingIds)) {
+      try {
+        await _kelasService.batalkanBooking(id);
+      } catch (_) {}
+    }
+    _bookingIds.clear();
+  }
+
   Future<void> _uploadAndSubmit() async {
     if (_buktiBayar == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,6 +165,7 @@ class _State extends State<StudentBookingScreen> {
       for (final id in _bookingIds) {
         await _kelasService.uploadBukti(id, url);
       }
+      _bookingSelesai = true;
       if (!mounted) return;
       _showSuccessSheet();
     } catch (e) {
@@ -238,15 +266,27 @@ class _State extends State<StudentBookingScreen> {
                         style:
                             TextStyle(fontSize: 11, color: Colors.grey[600])),
                     const SizedBox(height: 6),
-                    Text('${selectedList.length} sesi dipilih:',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700])),
-                    ...selectedList.map((idx) => Text(
-                        '• ${dates[idx]['day']}, ${dates[idx]['date']} - ${dates[idx]['time']} WIB',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey[600]))),
+                    if (_isResuming) ...[
+                      Text('Jadwal:',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700])),
+                      Text(
+                          '• ${widget.existingBooking!.jadwalDipilih} - ${widget.existingBooking!.jamDipilih} WIB',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey[600])),
+                    ] else ...[
+                      Text('${selectedList.length} sesi dipilih:',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700])),
+                      ...selectedList.map((idx) => Text(
+                          '• ${dates[idx]['day']}, ${dates[idx]['date']} - ${dates[idx]['time']} WIB',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey[600]))),
+                    ],
                   ])),
               const SizedBox(height: 20),
               Row(children: [
@@ -279,23 +319,35 @@ class _State extends State<StudentBookingScreen> {
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-          title: const Text('Booking'),
-          leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              onPressed: () {
-                if (_step > 1) setState(() => _step--);
-                else Navigator.pop(context);
-              })),
-      body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          child: _step == 1
-              ? _buildStep1()
-              : _step == 2
-                  ? _buildStep2()
-                  : _buildStep3()));
+  Widget build(BuildContext context) => PopScope(
+      canPop: _bookingSelesai || _isResuming,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _batalkanBookingPending();
+        if (mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
+          backgroundColor: const Color(0xFFF5F7FA),
+          appBar: AppBar(
+              title: Text(_isResuming ? 'Lanjutkan Pembayaran' : 'Booking'),
+              leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                  onPressed: () async {
+                    final minStep = _isResuming ? 2 : 1;
+                    if (_step > minStep) {
+                      await _batalkanBookingPending();
+                      if (mounted) setState(() => _step--);
+                    } else {
+                      Navigator.maybePop(context);
+                    }
+                  })),
+          body: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _step == 1
+                  ? _buildStep1()
+                  : _step == 2
+                      ? _buildStep2()
+                      : _buildStep3())));
 
   Widget _buildStep1() {
     final dates = _dates;
@@ -468,8 +520,8 @@ class _State extends State<StudentBookingScreen> {
   // ── BARU: Step 2 — rekening dari profil tutor ──────────────────────────────
 
   Widget _buildStep2() {
-    final dates        = _dates;
-    final selectedList = _selectedIdx.toList()..sort();
+    final dates        = _isResuming ? const <Map<String, String>>[] : _dates;
+    final selectedList = _isResuming ? const <int>[] : (_selectedIdx.toList()..sort());
     return SingleChildScrollView(
         key: const ValueKey(2),
         padding: const EdgeInsets.all(16),
@@ -486,7 +538,7 @@ class _State extends State<StudentBookingScreen> {
             const Divider(height: 20),
             _payRow('Tutor', widget.kelas.tutorNama),
             const Divider(height: 20),
-            _payRow('Jumlah Sesi', '${selectedList.length} sesi'),
+            _payRow('Jumlah Sesi', _isResuming ? '1 sesi' : '${selectedList.length} sesi'),
             const Divider(height: 20),
             Align(
                 alignment: Alignment.centerLeft,
@@ -494,12 +546,20 @@ class _State extends State<StudentBookingScreen> {
                     style:
                         TextStyle(fontSize: 12, color: Colors.grey[600]))),
             const SizedBox(height: 6),
-            ...selectedList.map((idx) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                    '• ${dates[idx]['day']}, ${dates[idx]['date']} - ${dates[idx]['time']} WIB',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600)))),
+            if (_isResuming)
+              Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                      '• ${widget.existingBooking!.jadwalDipilih} - ${widget.existingBooking!.jamDipilih} WIB',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600)))
+            else
+              ...selectedList.map((idx) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                      '• ${dates[idx]['day']}, ${dates[idx]['date']} - ${dates[idx]['time']} WIB',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600)))),
             const Divider(height: 20),
             _payRow('Total Bayar', _totalBayarFormatted, isTotal: true),
           ])),
@@ -658,7 +718,7 @@ class _State extends State<StudentBookingScreen> {
               const SizedBox(height: 4),
               _payRow('Tutor', widget.kelas.tutorNama),
               const SizedBox(height: 4),
-              _payRow('Jumlah Sesi', '${_selectedIdx.length} sesi'),
+              _payRow('Jumlah Sesi', _isResuming ? '1 sesi' : '${_selectedIdx.length} sesi'),
               const SizedBox(height: 4),
               _payRow('Total', _totalBayarFormatted, isTotal: true),
             ])),

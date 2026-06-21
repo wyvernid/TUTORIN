@@ -4,10 +4,12 @@ import '../../services/kelas_service.dart';
 import '../../models/booking_model.dart';
 import '../shared/chat_room_screen.dart';
 import '../shared/report_screen.dart';
-import 'student_detail_kelas_screen.dart'; // Tambahan import halaman detail
+import 'student_detail_kelas_screen.dart';
+import 'student_booking_screen.dart'; // BARU: buat lanjutkan pembayaran
 
 class StudentKelasScreen extends StatefulWidget {
-  const StudentKelasScreen({super.key});
+  final bool showBackButton;
+  const StudentKelasScreen({super.key, this.showBackButton = false});
   @override
   State<StudentKelasScreen> createState() => _State();
 }
@@ -33,7 +35,10 @@ class _State extends State<StudentKelasScreen>
     backgroundColor: const Color(0xFFF5F7FA),
     appBar: AppBar(
       title: const Text('Kelas Saya'),
-      automaticallyImplyLeading: false,
+      automaticallyImplyLeading: widget.showBackButton,
+      leading: widget.showBackButton
+          ? IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded), onPressed: () => Navigator.pop(context))
+          : null,
       bottom: TabBar(
         controller: _tab,
         labelColor: Colors.white,
@@ -137,7 +142,7 @@ class _State extends State<StudentKelasScreen>
                   studentNama: FirebaseAuth.instance.currentUser?.displayName ?? '');
                 if (mounted)
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Ulasan terkirim!'), backgroundColor: Colors.green));
+                    const SnackBar(content: Text('Ulasan terkirim, terima kasih!')));
               },
               child: const Text('Kirim')),
           ])));
@@ -173,10 +178,35 @@ class _BookingCard extends StatelessWidget {
     }
   }
 
+  void _confirmBatalkan(BuildContext context) {
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text('Batalkan Booking?', style: TextStyle(fontWeight: FontWeight.w700)),
+      content: Text(
+        'Booking "${booking.kelasJudul}" pada ${booking.jadwalDipilih} - ${booking.jamDipilih} akan dibatalkan dan tidak bisa dikembalikan.',
+        style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tidak')),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(ctx);
+            await KelasService().batalkanBooking(booking.id);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Booking dibatalkan')));
+            }
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Ya, Batalkan')),
+      ]));
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Mengecek apakah statusnya sudah terkonfirmasi / selesai agar bisa diklik
-    final bool canClick = booking.status == 'confirmed' || booking.status == 'completed';
+    // BARU: waiting_payment juga bisa diklik buat lanjutkan pembayaran
+    final bool canClick = booking.status == 'confirmed' ||
+        booking.status == 'completed' ||
+        booking.status == 'waiting_payment';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -186,35 +216,39 @@ class _BookingCard extends StatelessWidget {
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        // PERBAIKAN: Hanya bisa diklik jika sudah terkonfirmasi
         onTap: canClick ? () async {
-          // Menampilkan loading indikator saat fetching data kelas asli dari Firestore
           showDialog(
             context: context,
             barrierDismissible: false,
             builder: (_) => const Center(child: CircularProgressIndicator()),
           );
-          
+
           try {
-            // Ambil data detail kelas lengkap menggunakan kelasId dari model booking
             final kelasDetail = await KelasService().getKelasById(booking.kelasId);
-            
+
             if (context.mounted) Navigator.pop(context); // Tutup loading dialog
-            
+
             if (kelasDetail != null && context.mounted) {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => StudentDetailKelasScreen(kelas: kelasDetail, booking: booking),
-              ));
+              if (booking.status == 'waiting_payment') {
+                // BARU: belum dibayar → lanjutkan ke step pembayaran, skip pilih jadwal
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => StudentBookingScreen(kelas: kelasDetail, existingBooking: booking),
+                ));
+              } else {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => StudentDetailKelasScreen(kelas: kelasDetail, booking: booking),
+                ));
+              }
             }
           } catch (e) {
             if (context.mounted) {
-              Navigator.pop(context); // Tutup loading dialog jika error
+              Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Gagal memuat detail kelas: $e')),
               );
             }
           }
-        } : null, // Jika null, card otomatis terkunci (tidak bisa diklik)
+        } : null,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
             padding: const EdgeInsets.all(14),
@@ -243,6 +277,20 @@ class _BookingCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text('Total: Rp${(booking.nominal / 1000).toStringAsFixed(0)}.000',
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+
+              if (booking.status == 'waiting_payment') ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!)),
+                  child: Row(children: [
+                    Icon(Icons.touch_app_rounded, color: Colors.blue[700], size: 14),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text('Ketuk kartu ini untuk lanjutkan pembayaran',
+                      style: TextStyle(fontSize: 11, color: Colors.blue[700]))),
+                  ])),
+              ],
 
               if (booking.status == 'rejected' && booking.alasanTolak != null) ...[
                 const SizedBox(height: 8),
@@ -274,6 +322,13 @@ class _BookingCard extends StatelessWidget {
                   icon: const Icon(Icons.chat_bubble_outline, size: 15),
                   label: const Text('Chat Tutor', style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(foregroundColor: const Color(0xFF1565C0)))),
+
+              if (booking.status == 'waiting_payment')
+                Expanded(child: TextButton.icon(
+                  onPressed: () => _confirmBatalkan(context),
+                  icon: const Icon(Icons.cancel_outlined, size: 15, color: Colors.red),
+                  label: const Text('Batalkan', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red))),
 
               if (onReview != null)
                 Expanded(child: TextButton.icon(

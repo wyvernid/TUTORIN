@@ -65,6 +65,10 @@ class KelasService {
   Future<void> uploadBukti(String bookingId, String url) =>
       _db.collection('bookings').doc(bookingId).update(
           {'buktiBayarUrl': url, 'status': 'waiting_verification'});
+  
+    Future<void> batalkanBooking(String bookingId) =>
+      _db.collection('bookings').doc(bookingId).delete();
+      
 
   Future<void> konfirmasi(String bookingId, String kelasId) async {
     final batch = _db.batch();
@@ -110,6 +114,8 @@ class KelasService {
       print('Gagal kirim notifikasi/reminder konfirmasi booking: $e');
     }
   }
+
+  
 
   Future<void> tolak(String bookingId, String alasan) async {
     await _db.collection('bookings').doc(bookingId).update({'status': 'rejected', 'alasanTolak': alasan});
