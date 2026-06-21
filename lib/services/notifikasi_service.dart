@@ -1,9 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notifikasi_model.dart';
+import 'onesignal_service.dart';
 
-/// Service utama notifikasi in-app. Semua notifikasi (booking, chat,
-/// verifikasi tutor, laporan, ulasan, dll) disimpan di 1 collection
-/// Firestore `notifikasi`, dibedakan lewat field `uid` (penerima) & `tipe`.
+
 class NotifikasiService {
   final _db = FirebaseFirestore.instance;
 
@@ -30,6 +29,11 @@ class NotifikasiService {
             createdAt: DateTime.now(),
           ).toMap(),
         );
+
+    // Push notification asli — dipanggil "fire and forget" (tidak di-await
+    // dengan blocking), supaya kalau OneSignal lambat/gagal, proses utama
+    // (booking, approve, dll) tetap selesai duluan tanpa nunggu push.
+    OneSignalService.kirimPush(targetUid: uid, judul: judul, pesan: pesan);
   }
 
   /// Kirim notifikasi yang sama ke SEMUA admin sekaligus (mis. laporan baru).
@@ -61,6 +65,8 @@ class NotifikasiService {
       );
     }
     await batch.commit();
+
+    OneSignalService.kirimPushKeSemuaAdmin(judul: judul, pesan: pesan);
   }
 
   /// Stream semua notifikasi milik 1 user, terbaru di atas.
