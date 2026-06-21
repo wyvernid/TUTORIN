@@ -7,16 +7,14 @@ class UserModel {
   final bool isVerified, isSuspended;
   final double rating;
 
-  // ── BARU: status penolakan tutor (false = belum pernah ditolak / sudah
-  // daftar ulang) — dipakai supaya tutor yang ditolak admin bisa "Daftar
-  // Ulang" pakai akun (uid) yang sama, tanpa harus bikin akun Auth baru ──
+  // ── Status Penolakan Tutor ──
   final bool isRejected;
   final String? alasanTolak;
 
-  // ── BARU: info rekening tutor (semua nullable — opsional & untuk backward compat) ──
-  final String? namaBank;       // contoh: 'BCA', 'Mandiri', 'GoPay'
-  final String? nomorRekening;  // contoh: '1234567890'
-  final String? namaRekening;   // a.n. siapa
+  // ── Info rekening tutor (opsional) ──
+  final String? namaBank;       
+  final String? nomorRekening;  
+  final String? namaRekening;   
 
   UserModel({
     required this.uid,
@@ -36,7 +34,6 @@ class UserModel {
     this.isVerified = false,
     this.isSuspended = false,
     this.rating = 0.0,
-    // ── BARU ──
     this.isRejected = false,
     this.alasanTolak,
     this.namaBank,
@@ -46,10 +43,8 @@ class UserModel {
 
   /// Helper: apakah tutor ini sudah mengisi info rekening?
   bool get punyaRekening =>
-      namaBank != null &&
-      namaBank!.isNotEmpty &&
-      nomorRekening != null &&
-      nomorRekening!.isNotEmpty;
+      namaBank != null && namaBank!.trim().isNotEmpty &&
+      nomorRekening != null && nomorRekening!.trim().isNotEmpty;
 
   factory UserModel.fromMap(Map<String, dynamic> m, String uid) => UserModel(
         uid: uid,
@@ -69,7 +64,6 @@ class UserModel {
         isVerified: m["isVerified"] ?? false,
         isSuspended: m["isSuspended"] ?? false,
         rating: (m["rating"] ?? 0.0).toDouble(),
-        // ── BARU ──
         isRejected: m["isRejected"] ?? false,
         alasanTolak: m["alasanTolak"],
         namaBank: m["namaBank"],

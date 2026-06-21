@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/kelas_service.dart';
 import '../../services/auth_service.dart';
@@ -13,15 +14,101 @@ class TutorBerandaScreen extends StatefulWidget {
 }
 
 class _State extends State<TutorBerandaScreen> {
-  final _kelas = KelasService(); final _auth = AuthService();
+  final _kelas = KelasService(); 
+  final _auth = AuthService();
   UserModel? _user;
   late final String _uid;
+  
+  // Variabel untuk menyimpan pendapatan khusus bulan ini
+  int _pendapatanBulanIni = 0;
 
   @override
   void initState() {
     super.initState();
     _uid = FirebaseAuth.instance.currentUser!.uid;
-    _auth.getUserData(_uid).then((u) { if (mounted) setState(() => _user = u); });
+    _syncAndLoadStats();
+  }
+
+  // --- FUNGSI SINKRONISASI STATISTIK TUTOR ---
+  Future<void> _syncAndLoadStats() async {
+    try {
+      final db = FirebaseFirestore.instance;
+      
+      // 1. Ambil semua booking yang confirmed atau completed
+      final bookings = await db.collection('bookings')
+          .where('tutorId', isEqualTo: _uid)
+          .where('status', whereIn: ['confirmed', 'completed'])
+          .get();
+      
+      final uniqueStudents = <String>{};
+      int tempPendapatan = 0;
+      final now = DateTime.now();
+
+      for (var doc in bookings.docs) {
+        final data = doc.data();
+        
+        // A. Hitung total murid aktif (ID murid unik)
+        final sid = data['studentId'] as String?;
+        if (sid != null) uniqueStudents.add(sid);
+
+        // B. Hitung pendapatan bulan ini
+        // Menggunakan waktu konfirmasi, atau mundur ke waktu pembuatan booking
+        final ts = data['confirmedAt'] ?? data['createdAt'];
+        if (ts != null && ts is Timestamp) {
+          final date = ts.toDate();
+          if (date.month == now.month && date.year == now.year) {
+            tempPendapatan += (data['nominal'] as num?)?.toInt() ?? 0;
+          }
+        }
+      }
+
+      // 2. Hitung Rating Tutor (rata-rata dari semua ulasan kelas milik tutor ini)
+      final ulasan = await db.collection('ulasan')
+          .where('tutorId', isEqualTo: _uid)
+          .get();
+      
+      double avgRating = 0.0;
+      if (ulasan.docs.isNotEmpty) {
+        double total = 0;
+        for (var doc in ulasan.docs) {
+          total += (doc.data()['rating'] as num?)?.toDouble() ?? 0.0;
+        }
+        avgRating = total / ulasan.docs.length;
+      }
+
+      // 3. Update ke Firestore Profil Tutor
+      await db.collection('users').doc(_uid).update({
+        'totalMurid': uniqueStudents.length,
+        'rating': avgRating,
+      });
+
+      // Update UI dengan data yang baru dihitung
+      if (mounted) {
+        setState(() {
+          _pendapatanBulanIni = tempPendapatan;
+        });
+      }
+    } catch (e) {
+      debugPrint('Gagal sync stats beranda: $e');
+    }
+
+    // Load data profil terbaru (termasuk update yang baru disimpan ke Firestore)
+    final u = await _auth.getUserData(_uid);
+    if (mounted) setState(() => _user = u);
+  }
+
+  // Helper mengubah nominal int jadi format Rupiah yang rapi
+  String _formatRp(int nominal) {
+    if (nominal == 0) return 'Rp0';
+    String s = nominal.toString();
+    String result = '';
+    int count = 0;
+    for (int i = s.length - 1; i >= 0; i--) {
+      if (count != 0 && count % 3 == 0) result = '.$result';
+      result = s[i] + result;
+      count++;
+    }
+    return 'Rp$result';
   }
 
   @override
@@ -89,7 +176,7 @@ class _State extends State<TutorBerandaScreen> {
   Widget _buildStats() {
     final u = _user;
     return Padding(padding: const EdgeInsets.fromLTRB(16,14,16,0), child: Row(children: [
-      _stat('Rp-', 'Pendapatan Bulan Ini', Icons.account_balance_wallet_rounded, Colors.green),
+      _stat(_formatRp(_pendapatanBulanIni), 'Pendapatan Bulan Ini', Icons.account_balance_wallet_rounded, Colors.green),
       const SizedBox(width: 10),
       _stat('${u?.totalMurid ?? 0}', 'Murid Aktif', Icons.people_rounded, const Color(0xFF1565C0)),
       const SizedBox(width: 10),
@@ -99,7 +186,12 @@ class _State extends State<TutorBerandaScreen> {
 
   Widget _stat(String v, String l, IconData icon, Color c) => Expanded(child: Container(padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 5)]),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: c, size: 18), const SizedBox(height: 6), Text(v, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)), Text(l, style: TextStyle(fontSize: 9, color: Colors.grey[500]), maxLines: 2)])));
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: c, size: 18), 
+      const SizedBox(height: 6), 
+      Text(v, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis), 
+      Text(l, style: TextStyle(fontSize: 9, color: Colors.grey[500]), maxLines: 2)
+    ])));
 }
 
 class _PayCard extends StatelessWidget {

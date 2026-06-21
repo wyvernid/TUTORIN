@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/auth_service.dart';
@@ -24,8 +25,48 @@ class _State extends State<TutorProfilScreen> {
   @override
   void initState() { super.initState(); _load(); }
 
+  // --- FUNGSI SINKRONISASI STATISTIK TUTOR ---
   Future<void> _load() async {
-    final u = await _auth.getUserData(FirebaseAuth.instance.currentUser!.uid);
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      final db = FirebaseFirestore.instance;
+      
+      // Sync Total Murid
+      final bookings = await db.collection('bookings')
+          .where('tutorId', isEqualTo: uid)
+          .where('status', whereIn: ['confirmed', 'completed'])
+          .get();
+      final uniqueStudents = <String>{};
+      for (var doc in bookings.docs) {
+        final sid = doc.data()['studentId'] as String?;
+        if (sid != null) uniqueStudents.add(sid);
+      }
+
+      // Sync Rating
+      final ulasan = await db.collection('ulasan')
+          .where('tutorId', isEqualTo: uid)
+          .get();
+      double avgRating = 0.0;
+      if (ulasan.docs.isNotEmpty) {
+        double total = 0;
+        for (var doc in ulasan.docs) {
+          total += (doc.data()['rating'] as num?)?.toDouble() ?? 0.0;
+        }
+        avgRating = total / ulasan.docs.length;
+      }
+
+      // Update ke Firestore
+      await db.collection('users').doc(uid).update({
+        'totalMurid': uniqueStudents.length,
+        'rating': avgRating,
+      });
+    } catch (e) {
+      debugPrint('Gagal sync stats profil: $e');
+    }
+
+    // Mengambil data user yang sudah paling update
+    final u = await _auth.getUserData(uid);
     if (mounted) setState(() => _user = u);
   }
 
@@ -244,7 +285,7 @@ class _State extends State<TutorProfilScreen> {
                             ]))),
               const SizedBox(height: 12),
 
-              // ── BARU: Info Rekening ──────────────────────────────────
+              // ── Info Rekening ──────────────────────────────────
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Container(
@@ -478,7 +519,6 @@ class _State extends State<TutorProfilScreen> {
             Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
           ]));
 
-  /// Edit profil dasar (nama + telepon)
   void _showEdit() {
     final n = TextEditingController(text: _user?.nama);
     final t = TextEditingController(text: _user?.noTelepon);
@@ -528,8 +568,6 @@ class _State extends State<TutorProfilScreen> {
                           child: const Text('Simpan'))),
                 ]))));
   }
-
-  // ── BARU: Edit rekening ────────────────────────────────────────────────────
 
   void _showEditRekening() {
     final bank   = TextEditingController(text: _user?.namaBank ?? '');
