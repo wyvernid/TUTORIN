@@ -79,4 +79,17 @@ class LaporanService {
       print('Gagal kirim notifikasi laporan diabaikan: $e');
     }
   }
+
+  // ── BARU: dipanggil saat pull-to-refresh di Dashboard Admin ──
+  // Memaksa Firestore mengambil data "Laporan Aktif" terbaru dari server,
+  // bukan dari cache lokal.
+  Future<void> refreshDariServer() async {
+    try {
+      await _db.collection('laporan')
+          .where('status', isEqualTo: 'open')
+          .get(const GetOptions(source: Source.server));
+    } catch (e) {
+      print('refreshDariServer (LaporanService) gagal: $e');
+    }
+  }
 }

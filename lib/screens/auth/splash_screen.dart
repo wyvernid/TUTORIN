@@ -62,6 +62,20 @@ class _SplashScreenState extends State<SplashScreen>
       final data = await AuthService().getUserData(user.uid);
       if (!mounted) return;
 
+      // Penting: ini menutup celah dimana user yang SUDAH LOGIN (sesi
+      // Firebase Auth masih aktif di device) kemudian disuspend admin.
+      // Tanpa cek ini, dia tetap bisa masuk lagi setiap buka app karena
+      // splash_screen sebelumnya hanya pernah cek role, tidak pernah
+      // cek isSuspended. Langsung signOut supaya sesi tidak nyangkut,
+      // lalu arahkan ke LoginScreen dengan pesan suspend.
+      if (data?.isSuspended == true) {
+        await AuthService().logout();
+        if (!mounted) return;
+        _goTo(const LoginScreen(suspendedMessage:
+            'Akun kamu disuspend oleh admin.'));
+        return;
+      }
+
       switch (data?.role) {
         case 'tutor':
           // Tutor yang belum diverifikasi admin tidak boleh masuk ke

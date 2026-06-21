@@ -69,4 +69,26 @@ class AdminService {
 
   Future<void> suspendUser(String uid) => _db.collection('users').doc(uid).update({'isSuspended': true});
   Future<void> aktifkanUser(String uid) => _db.collection('users').doc(uid).update({'isSuspended': false});
+
+  // ── BARU: dipanggil saat pull-to-refresh di Dashboard Admin ──
+  // Memaksa Firestore mengambil data TERBARU dari server (bypass cache lokal
+  // yang bisa jadi basi kalau device sempat offline / data berubah saat app
+  // belum sempat sinkron). Stream .snapshots() yang sedang berjalan akan
+  // otomatis menerima dorongan data baru ini, tanpa perlu setState manual.
+  Future<void> refreshDariServer() async {
+    try {
+      await Future.wait([
+        _db.collection('users')
+            .where('role', isEqualTo: 'student')
+            .get(const GetOptions(source: Source.server)),
+        _db.collection('users')
+            .where('role', isEqualTo: 'tutor')
+            .get(const GetOptions(source: Source.server)),
+      ]);
+    } catch (e) {
+      // Kalau device benar-benar offline, biarkan saja -- stream tetap
+      // jalan dengan data cache terakhir, tidak perlu melempar error ke UI.
+      print('refreshDariServer (AdminService) gagal: $e');
+    }
+  }
 }

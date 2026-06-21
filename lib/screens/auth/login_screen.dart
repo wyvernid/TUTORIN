@@ -10,7 +10,11 @@ import 'verify_email_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  // Diisi otomatis oleh SplashScreen saat akun yang sedang login
+  // ternyata sudah disuspend admin, supaya pesannya langsung tampil
+  // di layar login tanpa user perlu coba login ulang dulu.
+  final String? suspendedMessage;
+  const LoginScreen({super.key, this.suspendedMessage});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -20,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passCtrl  = TextEditingController();
   final _auth      = AuthService();
   bool    _obscure = true, _loading = false;
-  String? _error;
+  late String? _error = widget.suspendedMessage;
 
   void _login() async {
     if (_emailCtrl.text.trim().isEmpty || _passCtrl.text.isEmpty) {
@@ -44,6 +48,21 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!verified) {
         Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: _emailCtrl.text.trim())));
+        return;
+      }
+
+      // Akun yang disuspend admin tidak boleh masuk ke home manapun,
+      // walau email sudah terverifikasi dan password benar. Langsung
+      // signOut supaya tidak ada sesi Firebase Auth yang nyangkut di
+      // device, lalu tampilkan pesan error di layar login ini juga
+      // (tidak perlu pindah halaman lain).
+      if (user?.isSuspended == true) {
+        await _auth.logout();
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _error = 'Akun kamu disuspend oleh admin. Hubungi admin untuk info lebih lanjut.';
+        });
         return;
       }
 
