@@ -7,6 +7,7 @@ import '../tutor/tutor_home_screen.dart';
 import '../admin/admin_home_screen.dart';
 import 'login_screen.dart';
 import 'tutor_pending_screen.dart';
+import 'verify_email_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -42,7 +43,20 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // Sudah login → cek role dari Firestore
+    // Sudah login tapi belum verifikasi email → tahan di halaman verifikasi,
+    // jangan biarkan masuk ke home manapun walau app baru dibuka ulang.
+    try {
+      final verified = await AuthService().reloadDanCekEmailVerified();
+      if (!mounted) return;
+      if (!verified) {
+        _goTo(VerifyEmailScreen(email: user.email ?? ''));
+        return;
+      }
+    } catch (e) {
+      debugPrint('SplashScreen email verify check error: $e');
+    }
+
+    // Sudah login & terverifikasi → cek role dari Firestore
     // Dibungkus try-catch supaya permission-denied tidak crash
     try {
       final data = await AuthService().getUserData(user.uid);

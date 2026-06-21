@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../student/student_home_screen.dart';
 import '../tutor/tutor_home_screen.dart';
 import '../admin/admin_home_screen.dart';
 import 'register_select_screen.dart';
 import 'tutor_pending_screen.dart';
+import 'verify_email_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,6 +34,18 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passCtrl.text);
 
       if (!mounted) return;
+
+      // Cek status verifikasi email TERKINI dari server. Akun yang belum
+      // klik link verifikasi tidak boleh masuk ke halaman utama manapun,
+      // termasuk admin (admin dibuat manual jadi seharusnya selalu verified,
+      // tapi pengecekan ini tetap berlaku untuk semua role demi konsistensi).
+      final verified = await _auth.reloadDanCekEmailVerified();
+      if (!mounted) return;
+      if (!verified) {
+        Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: _emailCtrl.text.trim())));
+        return;
+      }
 
       Widget next;
       switch (user?.role) {
@@ -92,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Email',
                 style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               TextField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
@@ -106,13 +121,14 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               const Text('Password',
                 style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               TextField(
                 controller: _passCtrl,
                 obscureText: _obscure,
                 style: const TextStyle(fontSize: 14),
-                onSubmitted: (_) => _login(),
                 decoration: InputDecoration(
+                  hintText: '••••••••',
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
                   filled: true, fillColor: Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF1565C0), size: 20),
@@ -120,14 +136,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       color: Colors.grey[500], size: 20),
                     onPressed: () => setState(() => _obscure = !_obscure)))),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  child: Text('Lupa Password?',
+                    style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12,
+                      decoration: TextDecoration.underline, decorationColor: Colors.white.withOpacity(0.85))))),
 
-              // Error
               if (_error != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
                   child: Row(children: [
                     const Icon(Icons.error_outline, color: Colors.red, size: 16),
                     const SizedBox(width: 8),
@@ -152,12 +178,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Text('LOGIN',
                           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 2)))),
             ])),
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
           GestureDetector(
-            onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const RegisterSelectScreen())),
-            child: const Text('Belum punya akun? Daftar sekarang',
-              style: TextStyle(color: Color(0xFF1565C0), fontSize: 13, fontWeight: FontWeight.w600))),
+            onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const RegisterSelectScreen())),
+            child: const Text.rich(TextSpan(children: [
+              TextSpan(text: 'Belum punya akun? ', style: TextStyle(color: Color(0xFF78909C), fontSize: 13)),
+              TextSpan(text: 'Daftar', style: TextStyle(color: Color(0xFF1565C0), fontSize: 13, fontWeight: FontWeight.w700)),
+            ]))),
           const SizedBox(height: 30),
         ]))));
 }

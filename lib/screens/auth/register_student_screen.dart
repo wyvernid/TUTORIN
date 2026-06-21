@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'login_screen.dart';
+import 'verify_email_screen.dart';
 
 class RegisterStudentScreen extends StatefulWidget {
   const RegisterStudentScreen({super.key});
@@ -44,27 +45,16 @@ class _State extends State<RegisterStudentScreen> {
         usia:     int.tryParse(_umur.text),
       );
 
-      // AuthService.register() otomatis sign-in user yang baru daftar
-      // (efek dari createUserWithEmailAndPassword). Karena kita mau dia
-      // login manual lagi lewat LoginScreen, logout dulu di sini.
-      await _auth.logout();
-
+      // AuthService.register() otomatis sign-in user yang baru daftar dan
+      // mengirim email verifikasi. User TETAP dalam keadaan login (tidak
+      // logout lagi) supaya VerifyEmailScreen bisa cek status & kirim ulang
+      // tanpa perlu login manual dulu.
       if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'Pendaftaran berhasil! Silakan login dengan akun kamu.',
-        ),
-        backgroundColor: Colors.green[600],
-        duration: const Duration(seconds: 3),
-      ),
-    );
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: _email.text.trim())),
+      );
     } catch (e) {
       String msg = e.toString();
       if (msg.contains('email-already-in-use')) {

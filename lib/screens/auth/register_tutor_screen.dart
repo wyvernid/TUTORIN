@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
-import 'tutor_pending_screen.dart';
 import 'login_screen.dart';
+import 'verify_email_screen.dart';
 
 class RegisterTutorScreen extends StatefulWidget {
   const RegisterTutorScreen({super.key});
@@ -64,9 +64,12 @@ class _State extends State<RegisterTutorScreen> {
       await _auth.updateProfil(uid, {'cvUrl': cvUrl, 'portofolioUrl': portofolioUrl});
 
       if (!mounted) return;
-      // Tutor baru selalu isVerified=false (lihat AuthService.register) → harus
-      // lewat halaman menunggu verifikasi, bukan langsung ke TutorHomeScreen.
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const TutorPendingScreen()));
+      // AuthService.register() sudah mengirim email verifikasi & TIDAK
+      // logout user. Tutor baru harus verifikasi email DULU sebelum bisa
+      // melihat status verifikasi admin (TutorPendingScreen), jadi arahkan
+      // ke VerifyEmailScreen, bukan langsung ke TutorPendingScreen.
+      Navigator.pushReplacement(context,
+        MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: _email.text.trim())));
     } catch (e) {
       setState(() { _error = 'Gagal mendaftar: $e'; _loading = false; });
     }
