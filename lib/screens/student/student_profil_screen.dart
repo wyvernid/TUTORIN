@@ -3,8 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/kelas_service.dart';
 import '../../models/user_model.dart';
+import '../../models/booking_model.dart';
 import '../auth/login_screen.dart';
+import 'student_kelas_screen.dart';
 
 class StudentProfilScreen extends StatefulWidget {
   const StudentProfilScreen({super.key});
@@ -13,7 +16,7 @@ class StudentProfilScreen extends StatefulWidget {
 }
 
 class _State extends State<StudentProfilScreen> {
-  final _auth = AuthService(); final _storage = StorageService();
+  final _auth = AuthService(); final _storage = StorageService(); final _kelasService = KelasService();
   UserModel? _user; bool _loadingFoto = false;
 
   @override
@@ -120,7 +123,12 @@ class _State extends State<StudentProfilScreen> {
               child: const Text('Student', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))),
           ])),
         Padding(padding: const EdgeInsets.fromLTRB(16,16,16,0), child: Row(children: [
-          _stat('${u.totalKelasSelesai}', 'Kelas Selesai', Icons.check_circle_rounded, Colors.green),
+          StreamBuilder<List<BookingModel>>(
+            stream: _kelasService.streamBookingStudent(u.uid),
+            builder: (_, snap) {
+              final selesai = snap.hasData ? snap.data!.where((b) => b.status == 'completed').length : u.totalKelasSelesai;
+              return _stat('$selesai', 'Kelas Selesai', Icons.check_circle_rounded, Colors.green);
+            }),
           const SizedBox(width: 10),
           _stat(u.usia != null ? '${u.usia} Thn' : '-', 'Usia', Icons.cake_outlined, const Color(0xFF1565C0)),
           const SizedBox(width: 10),
@@ -141,7 +149,7 @@ class _State extends State<StudentProfilScreen> {
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Container(
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
           child: Column(children: [
-            _menu(Icons.history_rounded, 'Riwayat Booking', () {}),
+            _menu(Icons.history_rounded, 'Riwayat Booking', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentKelasScreen()))),
             const Divider(height: 0, indent: 56),
             _menu(Icons.logout_rounded, 'Keluar', () async { await _auth.logout(); if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())); }, color: Colors.red),
           ]))),
