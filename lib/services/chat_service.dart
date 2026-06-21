@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/chat_model.dart';
+import '../models/notifikasi_model.dart';
+import 'notifikasi_service.dart';
 
 class ChatService {
   final _db = FirebaseFirestore.instance;
+  final _notif = NotifikasiService();
 
   String roomId(String a, String b) { final s = [a, b]..sort(); return '${s[0]}_${s[1]}'; }
 
@@ -24,6 +27,21 @@ class ChatService {
       'unreadCount': {receiverUid: FieldValue.increment(1)},
     }, SetOptions(merge: true));
     await batch.commit();
+
+    // ── BARU: kabari penerima ada pesan baru ──
+    try {
+      await _notif.kirim(
+        uid: receiverUid,
+        role: receiverRole,
+        tipe: NotifikasiTipe.chatBaru,
+        judul: senderNama,
+        pesan: fileUrl != null ? '[Gambar]' : text,
+        refId: rId,
+        refType: 'chat',
+      );
+    } catch (e) {
+      print('Gagal kirim notifikasi chat baru: $e');
+    }
   }
 
   Stream<List<ChatMessage>> streamPesan(String uid1, String uid2) => _db

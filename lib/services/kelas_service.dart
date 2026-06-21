@@ -2,9 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/kelas_model.dart';
 import '../models/booking_model.dart';
 import '../models/ulasan_model.dart';
+import '../models/notifikasi_model.dart';
+import 'notifikasi_service.dart';
+import 'reminder_service.dart';
 
 class KelasService {
   final _db = FirebaseFirestore.instance;
+  final _notif = NotifikasiService();
 
   Stream<List<KelasModel>> streamKelasAktif({String? kategori}) {
     Query q = _db.collection('kelas').where('isActive', isEqualTo: true);
@@ -36,6 +40,25 @@ class KelasService {
   // Booking
   Future<String> buatBooking(BookingModel b) async {
     final ref = await _db.collection('bookings').add(b.toMap());
+
+    // ── BARU: kabari tutor ada booking baru yang perlu diverifikasi ──
+    // Dibungkus try-catch supaya kalau pengiriman notif gagal (misalnya
+    // Firestore Rules untuk collection 'notifikasi' belum diatur), proses
+    // booking TETAP berhasil — notifikasi adalah pelengkap, bukan syarat.
+    try {
+      await _notif.kirim(
+        uid: b.tutorId,
+        role: 'tutor',
+        tipe: NotifikasiTipe.bookingBaru,
+        judul: 'Booking baru',
+        pesan: '${b.studentNama} memesan kelas "${b.kelasJudul}"',
+        refId: ref.id,
+        refType: 'booking',
+      );
+    } catch (e) {
+      print('Gagal kirim notifikasi booking baru: $e');
+    }
+
     return ref.id;
   }
 
@@ -50,10 +73,66 @@ class KelasService {
     batch.update(_db.collection('kelas').doc(kelasId),
         {'kuotaTerisi': FieldValue.increment(1)});
     await batch.commit();
+
+    // ── BARU: kabari student bookingnya dikonfirmasi + jadwalkan reminder ──
+    // Dibungkus try-catch: kalau notif/reminder gagal, konfirmasi booking
+    // (yang sudah ter-commit di batch di atas) tetap dianggap berhasil.
+    try {
+      final doc = await _db.collection('bookings').doc(bookingId).get();
+      final b = doc.data();
+      if (b != null) {
+        await _notif.kirim(
+          uid: b['studentId'] ?? '',
+          role: 'student',
+          tipe: NotifikasiTipe.bookingDikonfirmasi,
+          judul: 'Booking dikonfirmasi',
+          pesan: 'Pembayaranmu untuk "${b['kelasJudul'] ?? ''}" sudah diverifikasi tutor.',
+          refId: bookingId,
+          refType: 'booking',
+        );
+
+        // Jadwalkan reminder lokal 30 menit sebelum kelas dimulai.
+        // Kalau format jadwal/jam tidak sesuai dugaan, parseJadwalBooking
+        // mengembalikan null dan reminder otomatis di-skip (tidak crash).
+        final waktuMulai = ReminderService.parseJadwalBooking(
+          b['jadwalDipilih'] ?? '',
+          b['jamDipilih'] ?? '',
+        );
+        if (waktuMulai != null) {
+          await ReminderService.jadwalkanReminderKelas(
+            bookingId: bookingId,
+            judulKelas: b['kelasJudul'] ?? '',
+            waktuMulaiKelas: waktuMulai,
+          );
+        }
+      }
+    } catch (e) {
+      print('Gagal kirim notifikasi/reminder konfirmasi booking: $e');
+    }
   }
 
-  Future<void> tolak(String bookingId, String alasan) =>
-      _db.collection('bookings').doc(bookingId).update({'status': 'rejected', 'alasanTolak': alasan});
+  Future<void> tolak(String bookingId, String alasan) async {
+    await _db.collection('bookings').doc(bookingId).update({'status': 'rejected', 'alasanTolak': alasan});
+
+    // ── BARU: kabari student bookingnya ditolak ──
+    try {
+      final doc = await _db.collection('bookings').doc(bookingId).get();
+      final b = doc.data();
+      if (b != null) {
+        await _notif.kirim(
+          uid: b['studentId'] ?? '',
+          role: 'student',
+          tipe: NotifikasiTipe.bookingDitolak,
+          judul: 'Booking ditolak',
+          pesan: 'Pembayaranmu untuk "${b['kelasJudul'] ?? ''}" ditolak. Alasan: $alasan',
+          refId: bookingId,
+          refType: 'booking',
+        );
+      }
+    } catch (e) {
+      print('Gagal kirim notifikasi booking ditolak: $e');
+    }
+  }
 
   Stream<List<BookingModel>> streamBookingStudent(String studentId) => _db.collection('bookings')
       .where('studentId', isEqualTo: studentId).orderBy('createdAt', descending: true)
@@ -103,6 +182,21 @@ class KelasService {
     if (tutorUlasan.docs.isNotEmpty) {
       final avgTutor = tutorUlasan.docs.map((d) => (d.data()['rating'] as num).toDouble()).reduce((a, b) => a + b) / tutorUlasan.docs.length;
       await _db.collection('users').doc(tutorId).update({'rating': avgTutor, 'jumlahUlasan': tutorUlasan.docs.length});
+    }
+
+    // ── BARU: kabari tutor ada ulasan baru ──
+    try {
+      await _notif.kirim(
+        uid: tutorId,
+        role: 'tutor',
+        tipe: NotifikasiTipe.ulasanBaru,
+        judul: 'Ulasan baru',
+        pesan: '$studentNama memberi rating $rating★: $komentar',
+        refId: kelasId,
+        refType: 'kelas',
+      );
+    } catch (e) {
+      print('Gagal kirim notifikasi ulasan baru: $e');
     }
   }
 
