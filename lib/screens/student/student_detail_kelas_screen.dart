@@ -2,17 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/kelas_model.dart';
-import '../../models/booking_model.dart'; 
+import '../../models/booking_model.dart';
+import '../../models/user_model.dart';
 import '../../services/kelas_service.dart';
+import '../../services/auth_service.dart';
 import '../shared/ulasan_section.dart';
 import '../shared/peta_lokasi_screen.dart';
+import '../shared/pdf_viewer_screen.dart';
 import 'student_booking_screen.dart';
 
-class StudentDetailKelasScreen extends StatelessWidget {
+class StudentDetailKelasScreen extends StatefulWidget {
   final KelasModel kelas;
-  final BookingModel? booking; 
+  final BookingModel? booking;
 
   const StudentDetailKelasScreen({super.key, required this.kelas, this.booking});
+
+  @override
+  State<StudentDetailKelasScreen> createState() => _State();
+}
+
+class _State extends State<StudentDetailKelasScreen> {
+  final _authService = AuthService();
+
+  // BARU: data tutor (untuk ambil portofolioUrl & cvUrl) — tidak ikut
+  // didenormalisasi ke KelasModel, jadi harus diambil terpisah dari users/{tutorId}.
+  UserModel? _tutorData;
+  bool _loadingTutor = true;
+
+  KelasModel get kelas => widget.kelas;
+  BookingModel? get booking => widget.booking;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTutorData();
+  }
+
+  Future<void> _loadTutorData() async {
+    try {
+      final data = await _authService.getUserData(kelas.tutorId);
+      if (mounted) setState(() => _tutorData = data);
+    } finally {
+      if (mounted) setState(() => _loadingTutor = false);
+    }
+  }
+
+  void _lihatPdf(String? url, String title) {
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$title belum diupload tutor ini')));
+      return;
+    }
+    Navigator.push(context, MaterialPageRoute(
+        builder: (_) => PdfViewerScreen(pdfUrl: url, title: title)));
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -22,8 +65,8 @@ class StudentDetailKelasScreen extends StatelessWidget {
           leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
               onPressed: () => Navigator.pop(context))),
-      bottomNavigationBar: booking != null 
-          ? null 
+      bottomNavigationBar: booking != null
+          ? null
           : SafeArea(
               child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -42,7 +85,7 @@ class StudentDetailKelasScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            
+
             // Tampilkan Sesi info jika diakses dari Kelas Saya
             if (booking != null) ...[
               _card(
@@ -60,7 +103,7 @@ class StudentDetailKelasScreen extends StatelessWidget {
               const SizedBox(height: 12),
             ],
 
-            // Card utama info kelas
+            // Card judul & deskripsi kelas
             _card(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,14 +111,23 @@ class StudentDetailKelasScreen extends StatelessWidget {
               Text(kelas.judul,
                   style: const TextStyle(
                       fontSize: 20, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              if (kelas.deskripsi.isNotEmpty)
+              if (kelas.deskripsi.isNotEmpty) ...[
+                const SizedBox(height: 8),
                 Text(kelas.deskripsi,
                     style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[700],
                         height: 1.5)),
-              const SizedBox(height: 14),
+              ],
+            ])),
+            const SizedBox(height: 12),
+
+            // Card info kelas (kuota, durasi, harga, jadwal, mode)
+            _card(
+                title: 'Info Kelas',
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
               _row(Icons.people_rounded,
                   '${kelas.kuota} kuota total  ·  ${kelas.sisaSlot} slot tersisa',
                   color: kelas.isFull ? Colors.red : Colors.green),
@@ -199,6 +251,25 @@ class StudentDetailKelasScreen extends StatelessWidget {
                               .toList()),
                   ])),
                 ])),
+            const SizedBox(height: 12),
+
+            // BARU: Card Portofolio Tutor
+            _card(
+                title: 'Portofolio Tutor',
+                child: _loadingTutor
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(
+                            child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2))))
+                    : _dokumenRow(
+                        Icons.folder_open_outlined,
+                        'Portofolio',
+                        _tutorData?.portofolioUrl,
+                        () => _lihatPdf(
+                            _tutorData?.portofolioUrl, 'Portofolio Tutor'))),
             const SizedBox(height: 12),
 
             // Card Lokasi (Map)
@@ -327,5 +398,28 @@ class StudentDetailKelasScreen extends StatelessWidget {
             child: Text(text,
                 style: TextStyle(
                     fontSize: 12, color: color ?? Colors.grey[700]))),
+      ]);
+
+  // BARU: baris dokumen (Portofolio/CV) dengan status tersedia/belum + tombol Lihat.
+  Widget _dokumenRow(IconData icon, String label, String? url, VoidCallback onTap) =>
+      Row(children: [
+        Icon(icon, size: 20, color: const Color(0xFF1565C0)),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                  url != null && url.isNotEmpty ? 'Tersedia' : 'Belum diupload',
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: url != null && url.isNotEmpty
+                          ? Colors.green
+                          : Colors.grey[400])),
+            ])),
+        TextButton(onPressed: onTap, child: const Text('Lihat')),
       ]);
 }
