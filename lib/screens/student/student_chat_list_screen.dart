@@ -15,6 +15,30 @@ class StudentChatListScreen extends StatelessWidget {
       body: StreamBuilder<List<ChatRoom>>(
         stream: ChatService().streamDaftarChat(uid),
         builder: (_, snap) {
+          // BARU: tangani error stream secara eksplisit. Tanpa ini, kalau
+          // query gagal (paling sering karena composite index Firestore
+          // 'chatRooms (members ARRAY, lastMessageAt DESC)' belum dibuat),
+          // snap.hasData tetap false SELAMANYA dan spinner muter tanpa
+          // henti tanpa ada pesan error sama sekali ke user.
+          if (snap.hasError) {
+            final errStr = snap.error.toString();
+            final isIndexError = errStr.contains('FAILED_PRECONDITION') || errStr.contains('index');
+            return Center(child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.error_outline_rounded, size: 44, color: Colors.red[300]),
+                const SizedBox(height: 12),
+                Text(
+                  isIndexError
+                      ? 'Index Firestore untuk daftar chat belum dibuat.\nBuka log konsol Flutter, cari link Firebase Console,\nklik untuk membuat index secara otomatis.'
+                      : 'Gagal memuat daftar chat',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
+                const SizedBox(height: 6),
+                Text(errStr, textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+              ])));
+          }
           if (!snap.hasData) return const Center(child: CircularProgressIndicator());
           final rooms = snap.data!;
           if (rooms.isEmpty) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
