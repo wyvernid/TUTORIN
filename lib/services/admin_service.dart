@@ -24,6 +24,23 @@ class AdminService {
       .where('role', isEqualTo: 'student')
       .snapshots().map((s) => s.docs.map((d) => {...d.data(), 'uid': d.id}).toList());
 
+  Stream<List<Map<String, dynamic>>> streamAllUser() => _db
+      .collection('users')
+      .where('role', whereIn: ['student', 'tutor'])
+      .snapshots()
+      .map((s) => s.docs
+          .map((d) => {...d.data(), 'uid': d.id})
+          .toList()
+        ..sort((a, b) {
+          // Urutkan: student dulu, lalu tutor
+          final roleOrder = {'student': 0, 'tutor': 1};
+          final ra = roleOrder[a['role']] ?? 9;
+          final rb = roleOrder[b['role']] ?? 9;
+          if (ra != rb) return ra.compareTo(rb);
+          // Dalam role yang sama, urutkan berdasarkan nama
+          return (a['nama'] ?? '').toString().compareTo((b['nama'] ?? '').toString());
+        }));
+
   Future<void> verifikasiTutor(String uid) async {
     await _db.collection('users').doc(uid)
         .update({'isVerified': true, 'isRejected': false, 'alasanTolak': null});

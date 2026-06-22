@@ -121,21 +121,11 @@ class _SplashScreenState extends State<SplashScreen>
             child: ScaleTransition(
               scale: _scale,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: const [
-                      BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 24,
-                          offset: Offset(0, 8))
-                    ],
-                  ),
-                  child: const Icon(Icons.school_rounded,
-                      size: 56, color: Color(0xFF1565C0)),
+                Image.asset(
+                  'assets/images/splash.png',
+                  width: 180,
+                  height: 180,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 24),
                 const Text('TUTORIN',

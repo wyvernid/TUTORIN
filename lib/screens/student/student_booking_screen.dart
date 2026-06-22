@@ -8,6 +8,7 @@ import '../../models/user_model.dart';
 import '../../services/kelas_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
+import 'student_home_screen.dart';
 
 class StudentBookingScreen extends StatefulWidget {
   final KelasModel kelas;
@@ -214,7 +215,7 @@ class _State extends State<StudentBookingScreen> {
   }
 
   void _showSuccessSheet() {
-    final dates       = _dates;
+    final dates        = _dates;
     final selectedList = _selectedIdx.toList()..sort();
     showModalBottomSheet(
         context: context,
@@ -225,10 +226,8 @@ class _State extends State<StudentBookingScreen> {
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
             decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(24))),
-            child:
-                Column(mainAxisSize: MainAxisSize.min, children: [
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
                   width: 72,
                   height: 72,
@@ -238,13 +237,11 @@ class _State extends State<StudentBookingScreen> {
                       color: Colors.orange, size: 38)),
               const SizedBox(height: 16),
               const Text('Bukti Terkirim!',
-                  style:
-                      TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
               Text('Tutor akan memverifikasi dalam 1x24 jam.',
                   textAlign: TextAlign.center,
-                  style:
-                      TextStyle(fontSize: 13, color: Colors.grey[600])),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600])),
               const SizedBox(height: 16),
               Container(
                   width: double.infinity,
@@ -252,19 +249,14 @@ class _State extends State<StudentBookingScreen> {
                   decoration: BoxDecoration(
                       color: const Color(0xFFF5F7FA),
                       borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Text('Detail Booking',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700)),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Text(widget.kelas.judul,
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                     Text('Tutor: ${widget.kelas.tutorNama}',
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.grey[600])),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                     const SizedBox(height: 6),
                     if (_isResuming) ...[
                       Text('Jadwal:',
@@ -274,8 +266,7 @@ class _State extends State<StudentBookingScreen> {
                               color: Colors.grey[700])),
                       Text(
                           '• ${widget.existingBooking!.jadwalDipilih} - ${widget.existingBooking!.jamDipilih} WIB',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey[600])),
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                     ] else ...[
                       Text('${selectedList.length} sesi dipilih:',
                           style: TextStyle(
@@ -284,16 +275,19 @@ class _State extends State<StudentBookingScreen> {
                               color: Colors.grey[700])),
                       ...selectedList.map((idx) => Text(
                           '• ${dates[idx]['day']}, ${dates[idx]['date']} - ${dates[idx]['time']} WIB',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey[600]))),
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600]))),
                     ],
                   ])),
               const SizedBox(height: 20),
               Row(children: [
+                // ── Ke Beranda ────────────────────────────────────────────
                 Expanded(
                     child: OutlinedButton(
-                        onPressed: () =>
-                            Navigator.popUntil(context, (r) => r.isFirst),
+                        onPressed: () => Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const StudentHomeScreen()),
+                            (r) => false),
                         style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFF1565C0)),
                             padding: const EdgeInsets.symmetric(vertical: 13),
@@ -302,12 +296,15 @@ class _State extends State<StudentBookingScreen> {
                         child: const Text('Ke Beranda',
                             style: TextStyle(fontSize: 13)))),
                 const SizedBox(width: 12),
+                // ── Lihat Status → tab Kelas (index 1) ───────────────────
                 Expanded(
                     child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.pop(context);
-                        },
+                        onPressed: () => Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const StudentHomeScreen(initialIndex: 1)),
+                            (r) => false),
                         style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 13)),
                         child: const Text('Lihat Status',
@@ -315,7 +312,6 @@ class _State extends State<StudentBookingScreen> {
               ]),
             ])));
   }
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override

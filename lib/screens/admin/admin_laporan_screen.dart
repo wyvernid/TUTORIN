@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/laporan_service.dart';
 import '../../models/laporan_model.dart';
+import '../shared/chat_room_screen.dart';
 
 class AdminLaporanScreen extends StatefulWidget {
   const AdminLaporanScreen({super.key});
@@ -51,6 +53,22 @@ class _LaporanCard extends StatefulWidget {
 class _LaporanCardState extends State<_LaporanCard> {
   bool _expanded = false;
 
+  void _bukaChat({
+    required String peerUid,
+    required String peerNama,
+    required String peerRole,
+  }) {
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => ChatRoomScreen(
+        peerUid: peerUid,
+        peerNama: peerNama,
+        peerRole: peerRole,
+        myRole: 'admin',
+      )));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = widget.laporan;
@@ -59,6 +77,8 @@ class _LaporanCardState extends State<_LaporanCard> {
         border: Border.all(color: widget.isOpen ? Colors.red[100]! : Colors.green[100]!),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+        // ── Konten utama card ──────────────────────────────────────────────
         Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -74,19 +94,32 @@ class _LaporanCardState extends State<_LaporanCard> {
           const SizedBox(height: 10),
           Text(l.kategori, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
+
+          // Pelapor → Terlapor
           Row(children: [
-            Expanded(child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue.withOpacity(0.07), borderRadius: BorderRadius.circular(8)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(l.fromRole, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF1565C0))), Text(l.fromNama, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))]))),
+            Expanded(child: Container(padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.blue.withOpacity(0.07), borderRadius: BorderRadius.circular(8)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l.fromRole, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF1565C0))),
+                Text(l.fromNama, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+              ]))),
             const Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Icon(Icons.arrow_right_alt_rounded, color: Colors.red)),
-            Expanded(child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.orange.withOpacity(0.07), borderRadius: BorderRadius.circular(8)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(l.againstRole, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.orange)), Text(l.againstNama, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))]))),
+            Expanded(child: Container(padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.07), borderRadius: BorderRadius.circular(8)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l.againstRole, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.orange)),
+                Text(l.againstNama, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+              ]))),
           ]),
           const SizedBox(height: 8),
+
+          // Toggle detail
           GestureDetector(onTap: () => setState(() => _expanded = !_expanded),
             child: Row(children: [
               Text(_expanded ? 'Sembunyikan' : 'Lihat detail', style: const TextStyle(fontSize: 11, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
               Icon(_expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: const Color(0xFF1565C0), size: 16),
             ])),
+
           if (_expanded) ...[
             const SizedBox(height: 8),
             Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFF5F7FA), borderRadius: BorderRadius.circular(10)),
@@ -117,16 +150,59 @@ class _LaporanCardState extends State<_LaporanCard> {
             ],
           ],
         ])),
-        if (widget.isOpen) Container(
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFEEEEEE))), borderRadius: BorderRadius.vertical(bottom: Radius.circular(16))),
+
+        // ── Divider ────────────────────────────────────────────────────────
+        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+        // ── Tombol Chat Pelapor & Chat Terlapor ───────────────────────────
+        IntrinsicHeight(
           child: Row(children: [
-            Expanded(child: TextButton.icon(onPressed: () => _doAction('dismiss'),
-              icon: const Icon(Icons.close_rounded, size: 15, color: Colors.grey), label: const Text('Abaikan', style: TextStyle(color: Colors.grey, fontSize: 12)))),
-            Container(width: 0.5, height: 38, color: Colors.grey[200]),
-            Expanded(child: TextButton.icon(onPressed: () => _doAction('resolve'),
-              icon: const Icon(Icons.check_rounded, size: 15, color: Colors.green), label: const Text('Selesaikan', style: TextStyle(color: Colors.green, fontSize: 12)))),
-          ])),
+            Expanded(child: TextButton.icon(
+              onPressed: () => _bukaChat(
+                peerUid: l.fromUid,
+                peerNama: l.fromNama,
+                peerRole: l.fromRole,
+              ),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Color(0xFF1565C0)),
+              label: Text('Chat ${_labelRole(l.fromRole)}', style: const TextStyle(color: Color(0xFF1565C0), fontSize: 11)),
+            )),
+            VerticalDivider(width: 1, color: Colors.grey[200]),
+            Expanded(child: TextButton.icon(
+              onPressed: () => _bukaChat(
+                peerUid: l.againstUid,
+                peerNama: l.againstNama,
+                peerRole: l.againstRole,
+              ),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Colors.orange),
+              label: Text('Chat ${_labelRole(l.againstRole)}', style: const TextStyle(color: Colors.orange, fontSize: 11)),
+            )),
+          ]),
+        ),
+
+        // ── Tombol Abaikan & Selesaikan (hanya di tab Aktif) ─────────────
+        if (widget.isOpen) ...[
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+            child: Row(children: [
+              Expanded(child: TextButton.icon(onPressed: () => _doAction('dismiss'),
+                icon: const Icon(Icons.close_rounded, size: 15, color: Colors.grey), label: const Text('Abaikan', style: TextStyle(color: Colors.grey, fontSize: 12)))),
+              Container(width: 0.5, height: 38, color: Colors.grey[200]),
+              Expanded(child: TextButton.icon(onPressed: () => _doAction('resolve'),
+                icon: const Icon(Icons.check_rounded, size: 15, color: Colors.green), label: const Text('Selesaikan', style: TextStyle(color: Colors.green, fontSize: 12)))),
+            ]),
+          ),
+        ],
+
       ]));
+  }
+
+  String _labelRole(String role) {
+    switch (role) {
+      case 'student': return 'Student';
+      case 'tutor':   return 'Tutor';
+      default:        return role;
+    }
   }
 
   void _doAction(String action) {

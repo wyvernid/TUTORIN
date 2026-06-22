@@ -387,14 +387,7 @@ class _State extends State<TutorProfilScreen> {
                         const Divider(height: 0, indent: 52),
                         _menu(
                             Icons.logout_rounded, 'Keluar',
-                            () async {
-                              await _auth.logout();
-                              if (mounted)
-                                Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const LoginScreen()));
-                            },
+                            () => _confirmLogout(context),
                             color: Colors.red),
                       ]))),
               const SizedBox(height: 30),
@@ -638,5 +631,29 @@ class _State extends State<TutorProfilScreen> {
                           },
                           child: const Text('Simpan Rekening'))),
                 ]))));
+  }
+
+  // ── Konfirmasi logout (pola sama seperti admin) ──────────────────────────
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Keluar', style: TextStyle(fontWeight: FontWeight.w700)),
+            content: const Text('Apakah Anda yakin ingin keluar dari akun?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+              ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await _auth.logout();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                          context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+                    }
+                  },
+                  child: const Text('Keluar')),
+            ]));
   }
 }
