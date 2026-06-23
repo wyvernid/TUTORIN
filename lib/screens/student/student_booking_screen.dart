@@ -12,9 +12,6 @@ import 'student_home_screen.dart';
 
 class StudentBookingScreen extends StatefulWidget {
   final KelasModel kelas;
-  // BARU: kalau diisi, berarti melanjutkan booking yang SUDAH ADA di Firestore
-  // (status waiting_payment) — alur akan skip pilih jadwal dan langsung ke
-  // step pembayaran, tanpa membuat record booking baru.
   final BookingModel? existingBooking;
   const StudentBookingScreen({super.key, required this.kelas, this.existingBooking});
   @override
@@ -34,10 +31,14 @@ class _State extends State<StudentBookingScreen> {
   final List<String> _bookingIds = [];
   bool _bookingSelesai = false;
 
-  // BARU: true kalau screen ini dipakai buat melanjutkan booking lama, bukan bikin baru
   bool get _isResuming => widget.existingBooking != null;
 
-  // ── BARU: data profil tutor untuk rekening ──
+  // ── BARU: getter aman, tidak akan pernah kosong saat resuming ──
+  List<String> get _activeBookingIds {
+    if (_isResuming) return [widget.existingBooking!.id];
+    return _bookingIds;
+  }
+
   UserModel? _tutorData;
   bool _loadingTutor = false;
 
@@ -45,13 +46,12 @@ class _State extends State<StudentBookingScreen> {
   void initState() {
     super.initState();
     if (_isResuming) {
-      _bookingIds.add(widget.existingBooking!.id);
-      _step = 2; // langsung ke step pembayaran, jadwal sudah pernah dipilih sebelumnya
+      // Tidak perlu add ke _bookingIds karena kita pakai _activeBookingIds
+      _step = 2;
     }
     _loadTutorData();
   }
 
-  /// Load profil tutor untuk mendapatkan info rekening
   Future<void> _loadTutorData() async {
     setState(() => _loadingTutor = true);
     try {
@@ -83,7 +83,6 @@ class _State extends State<StudentBookingScreen> {
       return result;
     }
 
-    // Fallback skema lama
     const dayNums = {'Senin':1,'Selasa':2,'Rabu':3,'Kamis':4,'Jumat':5,'Sabtu':6,'Minggu':7};
     final now = DateTime.now();
     for (final day in widget.kelas.jadwal) {
@@ -139,11 +138,6 @@ class _State extends State<StudentBookingScreen> {
     }
   }
 
-  /// Batalkan (hapus) booking yang baru saja dibuat di sesi ini tapi belum
-  /// selesai dibayar. TIDAK berlaku saat _isResuming — booking lama yang
-  /// sedang dilanjutkan TIDAK boleh otomatis terhapus hanya karena user
-  /// keluar dari layar ini; penghapusan booking lama hanya lewat tombol
-  /// "Batalkan" eksplisit di tab Kelas.
   Future<void> _batalkanBookingPending() async {
     if (_isResuming || _bookingSelesai || _bookingIds.isEmpty) return;
     for (final id in List<String>.from(_bookingIds)) {
@@ -160,10 +154,19 @@ class _State extends State<StudentBookingScreen> {
           const SnackBar(content: Text('Upload bukti pembayaran dulu!')));
       return;
     }
+
+    // Pakai _activeBookingIds agar tidak pernah kosong saat resuming
+    final ids = _activeBookingIds;
+    if (ids.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Terjadi kesalahan, coba ulangi.')));
+      return;
+    }
+
     setState(() => _loading = true);
     try {
-      final url = await _storage.uploadBuktiBayar(_bookingIds.first, _buktiBayar!);
-      for (final id in _bookingIds) {
+      final url = await _storage.uploadBuktiBayar(ids.first, _buktiBayar!);
+      for (final id in ids) {
         await _kelasService.uploadBukti(id, url);
       }
       _bookingSelesai = true;
@@ -280,7 +283,6 @@ class _State extends State<StudentBookingScreen> {
                   ])),
               const SizedBox(height: 20),
               Row(children: [
-                // ── Ke Beranda ────────────────────────────────────────────
                 Expanded(
                     child: OutlinedButton(
                         onPressed: () => Navigator.pushAndRemoveUntil(
@@ -296,7 +298,6 @@ class _State extends State<StudentBookingScreen> {
                         child: const Text('Ke Beranda',
                             style: TextStyle(fontSize: 13)))),
                 const SizedBox(width: 12),
-                // ── Lihat Status → tab Kelas (index 1) ───────────────────
                 Expanded(
                     child: ElevatedButton(
                         onPressed: () => Navigator.pushAndRemoveUntil(
@@ -312,6 +313,7 @@ class _State extends State<StudentBookingScreen> {
               ]),
             ])));
   }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -513,8 +515,6 @@ class _State extends State<StudentBookingScreen> {
         ]));
   }
 
-  // ── BARU: Step 2 — rekening dari profil tutor ──────────────────────────────
-
   Widget _buildStep2() {
     final dates        = _isResuming ? const <Map<String, String>>[] : _dates;
     final selectedList = _isResuming ? const <int>[] : (_selectedIdx.toList()..sort());
@@ -561,7 +561,6 @@ class _State extends State<StudentBookingScreen> {
           ])),
           const SizedBox(height: 16),
 
-          // ── BARU: Rekening dari profil tutor ──
           Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
