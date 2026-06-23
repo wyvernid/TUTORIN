@@ -57,6 +57,8 @@ dependencies:
   flutter_local_notifications: ^22.0.1
   timezone: ^0.11.0
   onesignal_flutter: ^5.6.2
+  http: ^1.6.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

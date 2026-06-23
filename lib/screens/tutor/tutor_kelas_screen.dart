@@ -4,6 +4,7 @@ import '../../services/kelas_service.dart';
 import '../../models/kelas_model.dart';
 import '../../models/booking_model.dart';
 import '../shared/report_screen.dart';
+import '../shared/chat_room_screen.dart';
 import 'tutor_tambah_kelas_screen.dart';
 import 'tutor_detail_kelas_screen.dart';
 
@@ -91,6 +92,14 @@ class _KelasCardState extends State<_KelasCard> {
     ));
   }
 
+  void _chatStudent(BookingModel b) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ChatRoomScreen(
+      peerUid:  b.studentId,
+      peerNama: b.studentNama,
+      peerRole: 'student',
+      myRole:   'tutor')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final k = widget.kelas;
@@ -141,6 +150,9 @@ class _KelasCardState extends State<_KelasCard> {
                     child: Text(b.status == 'confirmed' ? 'Confirmed' : b.status == 'completed' ? 'Selesai' : 'Pending',
                       style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
                         color: b.status == 'confirmed' ? Colors.green[700] : b.status == 'completed' ? Colors.grey[600] : Colors.orange[700]))),
+                  const SizedBox(width: 6),
+                  GestureDetector(onTap: () => _chatStudent(b),
+                    child: Container(width: 26, height: 26, decoration: BoxDecoration(color: const Color(0xFF1565C0).withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF1565C0), size: 13))),
                   const SizedBox(width: 6),
                   GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReportScreen(targetUid: b.studentId, targetNama: b.studentNama, targetRole: 'student', myRole: 'tutor'))),
                     child: Container(width: 26, height: 26, decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.flag_outlined, color: Colors.red, size: 13))),

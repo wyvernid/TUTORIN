@@ -4,23 +4,17 @@ import '../models/notifikasi_model.dart';
 import 'notifikasi_service.dart';
 
 class ChatService {
-  final _db = FirebaseFirestore.instance;
+  final _db   = FirebaseFirestore.instance;
   final _notif = NotifikasiService();
 
   // ── Tracker: uid siapa yang sedang AKTIF membuka chat room tertentu ──
-  // Key = roomId, Value = uid yang sedang di dalam room itu.
-  // Diset dari ChatRoomScreen lewat setActiveRoom() saat initState/dispose.
   static final Map<String, String> _activeRooms = {};
 
-  /// Panggil di ChatRoomScreen.initState() dengan uid user yang sedang buka.
-  static void setActiveRoom(String roomId, String myUid) {
-    _activeRooms[roomId] = myUid;
-  }
+  static void setActiveRoom(String roomId, String myUid) =>
+      _activeRooms[roomId] = myUid;
 
-  /// Panggil di ChatRoomScreen.dispose() supaya notif kembali aktif.
-  static void clearActiveRoom(String roomId) {
-    _activeRooms.remove(roomId);
-  }
+  static void clearActiveRoom(String roomId) =>
+      _activeRooms.remove(roomId);
 
   String roomId(String a, String b) {
     final s = [a, b]..sort();
@@ -36,29 +30,37 @@ class ChatService {
     required String receiverRole,
     required String text,
     String? fileUrl,
+    // 'image' | 'pdf' | null
+    String? fileType,
   }) async {
-    final rId = roomId(senderUid, receiverUid);
+    final rId     = roomId(senderUid, receiverUid);
     final roomRef = _db.collection('chatRooms').doc(rId);
-    final batch = _db.batch();
+    final batch   = _db.batch();
+
+    // ── Preview teks di daftar chat ──
+    String lastMsg = text;
+    if (fileType == 'image') lastMsg = '[Gambar]';
+    if (fileType == 'pdf')   lastMsg = '[Dokumen PDF]';
 
     batch.set(roomRef.collection('messages').doc(), {
-      'senderId': senderUid,
+      'senderId':   senderUid,
       'senderNama': senderNama,
-      'text': text,
-      'fileUrl': fileUrl,
-      'createdAt': FieldValue.serverTimestamp(),
-      'isRead': false,
+      'text':       text,
+      'fileUrl':    fileUrl,
+      'fileType':   fileType,   // ← BARU
+      'createdAt':  FieldValue.serverTimestamp(),
+      'isRead':     false,
     });
 
     batch.set(
       roomRef,
       {
-        'members': [senderUid, receiverUid],
-        'memberNames': {senderUid: senderNama, receiverUid: receiverNama},
-        'memberRoles': {senderUid: senderRole, receiverUid: receiverRole},
-        'lastMessage': fileUrl != null ? '[Gambar]' : text,
+        'members':       [senderUid, receiverUid],
+        'memberNames':   {senderUid: senderNama, receiverUid: receiverNama},
+        'memberRoles':   {senderUid: senderRole, receiverUid: receiverRole},
+        'lastMessage':   lastMsg,
         'lastMessageAt': FieldValue.serverTimestamp(),
-        'unreadCount': {receiverUid: FieldValue.increment(1)},
+        'unreadCount':   {receiverUid: FieldValue.increment(1)},
       },
       SetOptions(merge: true),
     );
@@ -66,19 +68,17 @@ class ChatService {
     await batch.commit();
 
     // ── Hanya kirim push jika penerima TIDAK sedang aktif di room ini ──
-    // Kalau receiver sedang buka ChatRoomScreen yang sama, notif tidak perlu
-    // muncul di tray — mereka sudah lihat pesannya langsung.
     final receiverActiveInRoom = _activeRooms[rId] == receiverUid;
     if (!receiverActiveInRoom) {
       try {
         await _notif.kirim(
-          uid: receiverUid,
-          role: receiverRole,
-          tipe: NotifikasiTipe.chatBaru,
-          judul: senderNama,
-          pesan: fileUrl != null ? '[Gambar]' : text,
-          refId: rId,
-          refType: 'chat',
+          uid:      receiverUid,
+          role:     receiverRole,
+          tipe:     NotifikasiTipe.chatBaru,
+          judul:    senderNama,
+          pesan:    lastMsg,
+          refId:    rId,
+          refType:  'chat',
         );
       } catch (e) {
         print('Gagal kirim notifikasi chat baru: $e');
@@ -92,16 +92,14 @@ class ChatService {
       .collection('messages')
       .orderBy('createdAt')
       .snapshots()
-      .map((s) =>
-          s.docs.map((d) => ChatMessage.fromMap(d.data(), d.id)).toList());
+      .map((s) => s.docs.map((d) => ChatMessage.fromMap(d.data(), d.id)).toList());
 
   Stream<List<ChatRoom>> streamDaftarChat(String uid) => _db
       .collection('chatRooms')
       .where('members', arrayContains: uid)
       .orderBy('lastMessageAt', descending: true)
       .snapshots()
-      .map((s) =>
-          s.docs.map((d) => ChatRoom.fromMap(d.data(), d.id)).toList());
+      .map((s) => s.docs.map((d) => ChatRoom.fromMap(d.data(), d.id)).toList());
 
   Future<void> tandaiDibaca(String rId, String uid) async =>
       _db.collection('chatRooms').doc(rId).update({'unreadCount.$uid': 0});
