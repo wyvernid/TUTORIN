@@ -7,10 +7,7 @@ import '../student/student_home_screen.dart';
 import '../tutor/tutor_home_screen.dart';
 import '../auth/tutor_pending_screen.dart';
 
-/// Halaman "Cek email kamu" yang ditampilkan setelah register, atau saat
-/// user mencoba login tapi emailnya belum diverifikasi. User wajib klik
-/// link verifikasi yang dikirim Firebase ke emailnya sebelum bisa masuk
-/// ke halaman utama aplikasi.
+
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
   const VerifyEmailScreen({super.key, required this.email});
@@ -29,8 +26,6 @@ class _State extends State<VerifyEmailScreen> {
   @override
   void initState() {
     super.initState();
-    // Cek otomatis tiap beberapa detik, supaya kalau user verifikasi di
-    // browser lalu balik ke app, dia tidak perlu klik manual.
     _autoCheckTimer = Timer.periodic(const Duration(seconds: 4), (_) => _cekStatus(silent: true));
   }
 

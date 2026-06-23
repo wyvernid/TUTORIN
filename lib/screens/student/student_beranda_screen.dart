@@ -21,8 +21,6 @@ class _State extends State<StudentBerandaScreen> {
   String _namaUser    = '';
   late final String _uid;
 
-  /// Tag populer: 'Semua' + tag yang paling sering muncul di kelas aktif.
-  /// Diisi setelah data kelas pertama kali diterima.
   List<String> _popularTags = ['Semua'];
 
   @override
@@ -39,9 +37,7 @@ class _State extends State<StudentBerandaScreen> {
     if (mounted) setState(() => _namaUser = user?.nama ?? '');
   }
 
-  /// Hitung tag populer dari daftar kelas aktif.
-  /// Urutkan berdasarkan frekuensi kemunculan di kelas yang paling banyak dibooking
-  /// (didekati dengan frekuensi di seluruh kelas aktif).
+
   List<String> _hitungTagPopuler(List<KelasModel> kelasList) {
     final freq = <String, int>{};
     for (final k in kelasList) {
@@ -252,7 +248,7 @@ class _State extends State<StudentBerandaScreen> {
           }));
 }
 
-// ── Fungsi helper kecil ────────────────────────────────────────────────────
+// Fungsi helper kecil
 
 bool listEquals<T>(List<T> a, List<T> b) {
   if (a.length != b.length) return false;

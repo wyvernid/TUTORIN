@@ -30,7 +30,7 @@ class _State extends State<TutorBerandaScreen> {
     _syncAndLoadStats();
   }
 
-  // --- FUNGSI SINKRONISASI STATISTIK TUTOR ---
+  // FUNGSI SINKRONISASI STATISTIK TUTOR
   Future<void> _syncAndLoadStats() async {
     try {
       final db = FirebaseFirestore.instance;

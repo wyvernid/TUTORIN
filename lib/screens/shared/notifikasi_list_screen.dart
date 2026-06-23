@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/notifikasi_model.dart';
 import '../../services/notifikasi_service.dart';
 
-/// Halaman daftar SEMUA notifikasi milik user yang sedang login.
-/// Mendukung swipe-to-delete dan tombol "Tandai semua dibaca".
 class NotifikasiListScreen extends StatelessWidget {
   final String uid;
   final String role;

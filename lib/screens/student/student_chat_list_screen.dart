@@ -15,11 +15,6 @@ class StudentChatListScreen extends StatelessWidget {
       body: StreamBuilder<List<ChatRoom>>(
         stream: ChatService().streamDaftarChat(uid),
         builder: (_, snap) {
-          // BARU: tangani error stream secara eksplisit. Tanpa ini, kalau
-          // query gagal (paling sering karena composite index Firestore
-          // 'chatRooms (members ARRAY, lastMessageAt DESC)' belum dibuat),
-          // snap.hasData tetap false SELAMANYA dan spinner muter tanpa
-          // henti tanpa ada pesan error sama sekali ke user.
           if (snap.hasError) {
             final errStr = snap.error.toString();
             final isIndexError = errStr.contains('FAILED_PRECONDITION') || errStr.contains('index');

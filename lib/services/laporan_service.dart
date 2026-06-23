@@ -9,8 +9,6 @@ class LaporanService {
 
   Future<String> kirim(LaporanModel l) async {
     final ref = await _db.collection('laporan').add(l.toMap());
-
-    // ── BARU: kabari semua admin ada laporan baru yang perlu ditinjau ──
     try {
       await _notif.kirimKeSemuaAdmin(
         tipe: NotifikasiTipe.laporanBaru,
@@ -60,7 +58,6 @@ class LaporanService {
   Future<void> abaikan(String id, String catatan) async {
     await _db.collection('laporan').doc(id).update({'status': 'dismissed', 'catatanAdmin': catatan});
 
-    // ── BARU: kabari pelapor laporannya sudah ditinjau (meski diabaikan) ──
     try {
       final doc = await _db.collection('laporan').doc(id).get();
       final l = doc.data();
@@ -80,9 +77,6 @@ class LaporanService {
     }
   }
 
-  // ── BARU: dipanggil saat pull-to-refresh di Dashboard Admin ──
-  // Memaksa Firestore mengambil data "Laporan Aktif" terbaru dari server,
-  // bukan dari cache lokal.
   Future<void> refreshDariServer() async {
     try {
       await _db.collection('laporan')

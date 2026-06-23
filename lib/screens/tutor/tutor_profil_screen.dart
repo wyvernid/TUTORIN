@@ -107,7 +107,7 @@ class _State extends State<TutorProfilScreen> {
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               child: Column(children: [
-              // ── Header biru ──────────────────────────────────────────
+              //  Header biru 
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
@@ -231,7 +231,7 @@ class _State extends State<TutorProfilScreen> {
                 ]),
               ),
 
-              // ── Stats ────────────────────────────────────────────────
+              //  Stats 
               Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                   child: Row(children: [
@@ -243,7 +243,7 @@ class _State extends State<TutorProfilScreen> {
                   ])),
               const SizedBox(height: 12),
 
-              // ── Keahlian ────────────────────────────────────────────
+              //  Keahlian 
               if (u.keahlian.isNotEmpty)
                 Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -285,7 +285,7 @@ class _State extends State<TutorProfilScreen> {
                             ]))),
               const SizedBox(height: 12),
 
-              // ── Info Rekening ──────────────────────────────────
+              //  Info Rekening 
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Container(
@@ -354,7 +354,7 @@ class _State extends State<TutorProfilScreen> {
                           ]))),
               const SizedBox(height: 12),
 
-              // ── Menu ────────────────────────────────────────────────
+              //  Menu 
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Container(
@@ -395,7 +395,7 @@ class _State extends State<TutorProfilScreen> {
     );
   }
 
-  // ── Widgets helper ────────────────────────────────────────────────────────
+  //  Widgets helper 
 
   Widget _stat(String v, String l, IconData icon, Color c) => Expanded(
       child: Container(
@@ -468,7 +468,7 @@ class _State extends State<TutorProfilScreen> {
         ])),
       ]);
 
-  // ── Bottom sheets ─────────────────────────────────────────────────────────
+  //  Bottom sheets ─
 
   void _showFotoOptions() => showModalBottomSheet(
       context: context,
@@ -633,7 +633,6 @@ class _State extends State<TutorProfilScreen> {
                 ]))));
   }
 
-  // ── Konfirmasi logout (pola sama seperti admin) ──────────────────────────
   void _confirmLogout(BuildContext context) {
     showDialog(
         context: context,

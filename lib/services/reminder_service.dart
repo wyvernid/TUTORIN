@@ -2,19 +2,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
 
-/// Service buat jadwalin reminder LOKAL "kelas 30 menit lagi mulai".
-/// 100% gratis — dijadwalkan langsung di HP user, TIDAK butuh Cloud Functions
-/// atau server tambahan.
-///
-/// Cara pakai:
-/// 1. Panggil `ReminderService.init()` SEKALI di main.dart, sebelum runApp().
-/// 2. Panggil `jadwalkanReminderKelas(...)` setiap kali booking dikonfirmasi
-///    tutor (lihat PANDUAN_INTEGRASI_NOTIFIKASI.md → bagian KelasService.konfirmasi).
-/// 3. (Opsional) Panggil `batalkanReminder(bookingId)` kalau booking yang
-///    sudah confirmed ternyata dibatalkan, supaya tidak ada reminder nyasar.
-///
-/// CATATAN: reminder ini dijadwalkan per-device. Kalau user uninstall app
-/// atau restart HP, jadwal bisa hilang — wajar untuk pendekatan gratis ini.
 class ReminderService {
   static final _plugin = FlutterLocalNotificationsPlugin();
 
@@ -24,23 +11,18 @@ class ReminderService {
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings();
-    // v22: initialize() sekarang pakai named parameter `settings`
-    // (sebelumnya positional langsung).
     await _plugin.initialize(
       settings: const InitializationSettings(android: androidInit, iOS: iosInit),
     );
 
-    // Android 13+ wajib minta izin notifikasi secara eksplisit.
     await _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
   }
 
-  /// ID notifikasi harus int & konsisten per booking supaya bisa dibatalkan.
   static int _idDari(String bookingId) => bookingId.hashCode & 0x7fffffff;
 
   /// Jadwalkan reminder 30 menit sebelum [waktuMulaiKelas].
-  /// Kalau waktu reminder ternyata sudah lewat, reminder otomatis di-skip.
   static Future<void> jadwalkanReminderKelas({
     required String bookingId,
     required String judulKelas,
@@ -52,9 +34,6 @@ class ReminderService {
     final jam = waktuMulaiKelas.hour.toString().padLeft(2, '0');
     final menit = waktuMulaiKelas.minute.toString().padLeft(2, '0');
 
-    // v22: zonedSchedule() sekarang full named parameters, dan parameter
-    // `uiLocalNotificationDateInterpretation` SUDAH DIHAPUS dari package
-    // (itu sumber error utama kamu) — cukup hapus, tidak perlu diganti apa-apa.
     await _plugin.zonedSchedule(
       id: _idDari(bookingId),
       title: 'Kelas akan dimulai 30 menit lagi',
@@ -74,11 +53,8 @@ class ReminderService {
     );
   }
 
-  // v22: cancel() sekarang pakai named parameter `id`.
   static Future<void> batalkanReminder(String bookingId) => _plugin.cancel(id: _idDari(bookingId));
 
-  /// Helper: ubah "15 Jan 2025" + "14:00" (format yang dipakai
-  /// BookingModel.jadwalDipilih & jamDipilih di project ini) jadi DateTime asli.
   static DateTime? parseJadwalBooking(String jadwalDipilih, String jamDipilih) {
     const bulan = {
       'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'Mei': 5, 'Jun': 6,
@@ -95,7 +71,7 @@ class ReminderService {
         int.parse(jam[1]),
       );
     } catch (_) {
-      return null; // format tidak sesuai dugaan → reminder di-skip, tidak crash
+      return null; 
     }
   }
 }

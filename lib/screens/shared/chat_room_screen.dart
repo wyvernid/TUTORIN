@@ -51,7 +51,7 @@ class _State extends State<ChatRoomScreen> {
     super.dispose();
   }
 
-  // ── Kirim pesan ───────────────────────────────────────────────────────────
+  //  Kirim pesan 
   void _send({String? text, String? fileUrl, String? fileType}) async {
     final msg = text ?? _msgCtrl.text.trim();
     if (msg.isEmpty && fileUrl == null) return;
@@ -83,7 +83,7 @@ class _State extends State<ChatRoomScreen> {
     }
   }
 
-  // ── Bottom sheet lampiran ─────────────────────────────────────────────────
+  //  Bottom sheet lampiran 
   void _showLampiranSheet() => showModalBottomSheet(
     context: context,
     shape: const RoundedRectangleBorder(
@@ -175,19 +175,19 @@ class _State extends State<ChatRoomScreen> {
     ),
   );
 
-  // ── Buka gambar full screen ───────────────────────────────────────────────
+  //  Buka gambar full screen 
   void _lihatGambar(String url) => Navigator.push(
     context,
     MaterialPageRoute(builder: (_) => _FullImageScreen(url: url)),
   );
 
-  // ── Buka PDF viewer ───────────────────────────────────────────────────────
+  //  Buka PDF viewer 
   void _lihatPdf(String url, String nama) => Navigator.push(
     context,
     MaterialPageRoute(builder: (_) => PdfViewerScreen(pdfUrl: url, title: nama)),
   );
 
-  // ── Download file ─────────────────────────────────────────────────────────
+  //  Download file 
   Future<void> _downloadFile(String url, String namaFile) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -212,9 +212,9 @@ class _State extends State<ChatRoomScreen> {
     }
   }
 
-  // ── Build bubble berdasarkan tipe pesan ───────────────────────────────────
+  //  Build bubble berdasarkan tipe pesan 
   Widget _buildBubble(ChatMessage m, bool isMe) {
-    // ── Bubble PDF ──
+    //  Bubble PDF 
     if (m.isPdf && m.fileUrl != null) {
       // Ambil nama file dari teks pesan ("[PDF] namafile.pdf") atau fallback
       final namaFile = m.text.startsWith('[PDF] ')
@@ -290,7 +290,7 @@ class _State extends State<ChatRoomScreen> {
       );
     }
 
-    // ── Bubble Gambar ──
+    //  Bubble Gambar 
     if (m.isImage && m.fileUrl != null) {
       return GestureDetector(
         onTap: () => _lihatGambar(m.fileUrl!),
@@ -333,7 +333,7 @@ class _State extends State<ChatRoomScreen> {
       );
     }
 
-    // ── Bubble teks biasa ──
+    //  Bubble teks biasa 
     // (termasuk backward-compat: fileUrl ada tapi fileType null = gambar lama)
     if (m.fileUrl != null && m.fileType == null) {
       // Pesan lama — tampilkan sebagai gambar (fallback)
@@ -479,7 +479,7 @@ class _State extends State<ChatRoomScreen> {
         ),
       ),
 
-      // ── Input bar ──────────────────────────────────────────────────────────
+      //  Input bar 
       Container(
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
         color: Colors.white,
@@ -535,7 +535,7 @@ class _State extends State<ChatRoomScreen> {
   );
 }
 
-// ── Full Screen Image Viewer ───────────────────────────────────────────────
+//  Full Screen Image Viewer 
 class _FullImageScreen extends StatelessWidget {
   final String url;
   const _FullImageScreen({required this.url});

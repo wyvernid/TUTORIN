@@ -78,7 +78,7 @@ class _LaporanCardState extends State<_LaporanCard> {
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-        // ── Konten utama card ──────────────────────────────────────────────
+        //  Konten utama card 
         Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -113,7 +113,6 @@ class _LaporanCardState extends State<_LaporanCard> {
           ]),
           const SizedBox(height: 8),
 
-          // Toggle detail
           GestureDetector(onTap: () => setState(() => _expanded = !_expanded),
             child: Row(children: [
               Text(_expanded ? 'Sembunyikan' : 'Lihat detail', style: const TextStyle(fontSize: 11, color: Color(0xFF1565C0), fontWeight: FontWeight.w600)),
@@ -151,10 +150,8 @@ class _LaporanCardState extends State<_LaporanCard> {
           ],
         ])),
 
-        // ── Divider ────────────────────────────────────────────────────────
         const Divider(height: 1, color: Color(0xFFEEEEEE)),
 
-        // ── Tombol Chat Pelapor & Chat Terlapor ───────────────────────────
         IntrinsicHeight(
           child: Row(children: [
             Expanded(child: TextButton.icon(
@@ -179,7 +176,6 @@ class _LaporanCardState extends State<_LaporanCard> {
           ]),
         ),
 
-        // ── Tombol Abaikan & Selesaikan (hanya di tab Aktif) ─────────────
         if (widget.isOpen) ...[
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
           ClipRRect(
@@ -229,7 +225,6 @@ class _LaporanCardState extends State<_LaporanCard> {
   }
 }
 
-/// Viewer fullscreen untuk bukti laporan, bisa di-zoom (pinch / double tap).
 class _FullImageViewer extends StatefulWidget {
   final String imageUrl;
   const _FullImageViewer({required this.imageUrl});

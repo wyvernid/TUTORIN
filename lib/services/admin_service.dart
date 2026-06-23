@@ -6,15 +6,9 @@ class AdminService {
   final _db = FirebaseFirestore.instance;
   final _notif = NotifikasiService();
 
-  // Tutor pending = belum verified DAN belum ditolak (kalau sudah ditolak,
-  // dia harus "Daftar Ulang" dulu lewat TutorPendingScreen sebelum balik
-  // muncul di tab ini lagi).
   Stream<List<Map<String,dynamic>>> streamTutorPending() => _db.collection('users')
       .where('role', isEqualTo: 'tutor').where('isVerified', isEqualTo: false)
-      .snapshots().map((s) => s.docs
-          .map((d) => {...d.data(), 'uid': d.id})
-          .where((u) => u['isRejected'] != true)
-          .toList());
+      .snapshots().map((s) => s.docs.map((d) => {...d.data(), 'uid': d.id}).where((u) => u['isRejected'] != true).toList());
 
   Stream<List<Map<String,dynamic>>> streamTutorVerified() => _db.collection('users')
       .where('role', isEqualTo: 'tutor').where('isVerified', isEqualTo: true)
@@ -32,20 +26,16 @@ class AdminService {
           .map((d) => {...d.data(), 'uid': d.id})
           .toList()
         ..sort((a, b) {
-          // Urutkan: student dulu, lalu tutor
           final roleOrder = {'student': 0, 'tutor': 1};
           final ra = roleOrder[a['role']] ?? 9;
           final rb = roleOrder[b['role']] ?? 9;
           if (ra != rb) return ra.compareTo(rb);
-          // Dalam role yang sama, urutkan berdasarkan nama
           return (a['nama'] ?? '').toString().compareTo((b['nama'] ?? '').toString());
         }));
 
   Future<void> verifikasiTutor(String uid) async {
     await _db.collection('users').doc(uid)
         .update({'isVerified': true, 'isRejected': false, 'alasanTolak': null});
-
-    // ── BARU: kabari tutor akunnya sudah diverifikasi ──
     try {
       await _notif.kirim(
         uid: uid,
@@ -65,8 +55,6 @@ class AdminService {
   Future<void> tolakTutor(String uid, {String? alasan}) async {
     await _db.collection('users').doc(uid)
         .update({'isVerified': false, 'isRejected': true, 'alasanTolak': alasan});
-
-    // ── BARU: kabari tutor pendaftarannya ditolak ──
     try {
       await _notif.kirim(
         uid: uid,
@@ -87,11 +75,7 @@ class AdminService {
   Future<void> suspendUser(String uid) => _db.collection('users').doc(uid).update({'isSuspended': true});
   Future<void> aktifkanUser(String uid) => _db.collection('users').doc(uid).update({'isSuspended': false});
 
-  // ── BARU: dipanggil saat pull-to-refresh di Dashboard Admin ──
-  // Memaksa Firestore mengambil data TERBARU dari server (bypass cache lokal
-  // yang bisa jadi basi kalau device sempat offline / data berubah saat app
-  // belum sempat sinkron). Stream .snapshots() yang sedang berjalan akan
-  // otomatis menerima dorongan data baru ini, tanpa perlu setState manual.
+
   Future<void> refreshDariServer() async {
     try {
       await Future.wait([
@@ -103,8 +87,6 @@ class AdminService {
             .get(const GetOptions(source: Source.server)),
       ]);
     } catch (e) {
-      // Kalau device benar-benar offline, biarkan saja -- stream tetap
-      // jalan dengan data cache terakhir, tidak perlu melempar error ke UI.
       print('refreshDariServer (AdminService) gagal: $e');
     }
   }

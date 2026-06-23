@@ -6,16 +6,6 @@ import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../shared/notifikasi_badged_icon.dart';
 
-/// FIX: sebelumnya class ini StatelessWidget dan membuat AdminService() +
-/// stream baru di setiap build(). Setiap kali parent (AdminHomeScreen)
-/// rebuild, StreamBuilder menerima objek Stream yang BERBEDA walau query-nya
-/// sama persis -> listener lama dibatalkan & subscribe ulang dari nol.
-/// Efeknya: angka di dashboard kadang nyangkut / tidak ikut update real-time
-/// saat ada perubahan dari tab lain (approve tutor, suspend user, dll).
-///
-/// Sekarang jadi StatefulWidget: AdminService & semua Stream dibuat SEKALI
-/// di initState dan disimpan sebagai field, sama seperti pola yang sudah
-/// benar di AdminUserScreen / AdminTutorScreen.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -28,7 +18,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _laporanService = LaporanService();
   late final String _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  // Stream dibuat sekali saja & dipakai terus selama widget hidup.
   late final Stream<String> _totalStudentStream =
       _adminService.streamStudent().map((l) => l.length.toString());
   late final Stream<String> _tutorAktifStream =
@@ -38,17 +27,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late final Stream<String> _laporanAktifStream =
       _laporanService.streamAktif().map((l) => l.length.toString());
 
-  // Stream khusus list "Laporan Terbaru" (sumbernya sama dengan streamAktif,
-  // tapi disimpan terpisah supaya jelas dipakai untuk apa).
+ 
   late final _laporanTerbaruStream = _laporanService.streamAktif();
 
   Future<void> _refresh() async {
-    // Paksa Firestore ambil data terbaru dari server, bukan dari cache lokal
-    // yang mungkin masih basi (penyebab umum "angka salah / tidak update").
+
     await _adminService.refreshDariServer();
     await _laporanService.refreshDariServer();
-    // snapshots() akan otomatis mendorong data baru ke semua StreamBuilder
-    // begitu hasil dari server diterima, tidak perlu setState manual.
+
   }
 
   @override

@@ -23,9 +23,6 @@ class StudentDetailKelasScreen extends StatefulWidget {
 
 class _State extends State<StudentDetailKelasScreen> {
   final _authService = AuthService();
-
-  // BARU: data tutor (untuk ambil portofolioUrl & cvUrl) — tidak ikut
-  // didenormalisasi ke KelasModel, jadi harus diambil terpisah dari users/{tutorId}.
   UserModel? _tutorData;
   bool _loadingTutor = true;
 

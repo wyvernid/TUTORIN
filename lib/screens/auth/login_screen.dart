@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../student/student_home_screen.dart';
 import '../tutor/tutor_home_screen.dart';
@@ -10,9 +9,6 @@ import 'verify_email_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  // Diisi otomatis oleh SplashScreen saat akun yang sedang login
-  // ternyata sudah disuspend admin, supaya pesannya langsung tampil
-  // di layar login tanpa user perlu coba login ulang dulu.
   final String? suspendedMessage;
   const LoginScreen({super.key, this.suspendedMessage});
   @override
@@ -39,10 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // Cek status verifikasi email TERKINI dari server. Akun yang belum
-      // klik link verifikasi tidak boleh masuk ke halaman utama manapun,
-      // termasuk admin (admin dibuat manual jadi seharusnya selalu verified,
-      // tapi pengecekan ini tetap berlaku untuk semua role demi konsistensi).
+      // Cek status verifikasi email TERKINI dari server. Akun yang belum verifikasi email tidak boleh masuk ke home manapun, walau password benar.
       final verified = await _auth.reloadDanCekEmailVerified();
       if (!mounted) return;
       if (!verified) {
@@ -51,11 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Akun yang disuspend admin tidak boleh masuk ke home manapun,
-      // walau email sudah terverifikasi dan password benar. Langsung
-      // signOut supaya tidak ada sesi Firebase Auth yang nyangkut di
-      // device, lalu tampilkan pesan error di layar login ini juga
-      // (tidak perlu pindah halaman lain).
       if (user?.isSuspended == true) {
         await _auth.logout();
         if (!mounted) return;
@@ -66,11 +54,9 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      Widget next;
+      Widget next; 
       switch (user?.role) {
-        case 'tutor':
-          // Tutor yang belum diverifikasi admin tidak boleh masuk ke
-          // TutorHomeScreen — arahkan ke halaman menunggu verifikasi.
+        case 'tutor': 
           next = (user?.isVerified == true)
               ? const TutorHomeScreen()
               : const TutorPendingScreen();

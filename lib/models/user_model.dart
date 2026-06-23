@@ -7,11 +7,11 @@ class UserModel {
   final bool isVerified, isSuspended;
   final double rating;
 
-  // ── Status Penolakan Tutor ──
+  //  Status Penolakan Tutor 
   final bool isRejected;
   final String? alasanTolak;
 
-  // ── Info rekening tutor (opsional) ──
+  //  Info rekening tutor (opsional) 
   final String? namaBank;       
   final String? nomorRekening;  
   final String? namaRekening;   

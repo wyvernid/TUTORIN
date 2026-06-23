@@ -1,7 +1,6 @@
 class ChatMessage {
   final String id, senderId, senderNama, text;
   final String? fileUrl;
-  // 'image' | 'pdf' | null (pesan teks biasa)
   final String? fileType;
   final DateTime createdAt;
   final bool isRead;

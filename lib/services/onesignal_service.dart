@@ -11,29 +11,23 @@ class OneSignalService {
   // Base URL API OneSignal yang baru (yang lama, /api/v1/, sudah deprecated).
   static const String _baseUrl = 'https://api.onesignal.com';
 
-  /// Panggil 1x di main.dart sebelum runApp().
   static Future<void> init() async {
     OneSignal.Debug.setLogLevel(OSLogLevel.error);
     OneSignal.initialize(_appId);
     await OneSignal.Notifications.requestPermission(true);
   }
 
-  /// Panggil tiap kali user login / register sukses, supaya OneSignal tahu
-  /// "device ini punya siapa" (ditarget pakai uid Firestore, BUKAN device
-  /// token — jadi gampang, tinggal kirim ke uid-nya langsung).
+  /// Panggil tiap kali user login / register sukses
   static Future<void> loginUser(String uid) async {
     await OneSignal.login(uid);
   }
 
-  /// Panggil tiap kali user logout, supaya device ini berhenti dianggap
-  /// "milik" uid tadi (penting kalau 1 HP dipakai gonta-ganti akun).
+  /// Panggil tiap kali user logout
   static Future<void> logoutUser() async {
     await OneSignal.logout();
   }
 
   /// Kirim push notification ke 1 user (lewat uid yang sudah di-`login()`
-  /// di device tujuan). Dipanggil dari NotifikasiService.kirim() supaya
-  /// SETIAP notifikasi in-app otomatis juga jadi push asli di tray HP.
   static Future<void> kirimPush({
     required String targetUid,
     required String judul,
@@ -60,16 +54,11 @@ class OneSignalService {
         print('Gagal kirim push OneSignal (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
-      // Push cuma pelengkap — kalau gagal kirim (mis. device belum pernah
-      // login OneSignal, tidak ada internet, dll), notifikasi in-app di
-      // Firestore (NotifikasiService.kirim) TETAP berhasil tersimpan.
-      // ignore: avoid_print
       print('Gagal kirim push OneSignal: $e');
     }
   }
 
-  /// Kirim push ke SEMUA admin sekaligus (dipanggil dari
-  /// NotifikasiService.kirimKeSemuaAdmin).
+  /// Kirim push ke SEMUA admin sekaligus 
   static Future<void> kirimPushKeSemuaAdmin({
     required String judul,
     required String pesan,
@@ -83,11 +72,6 @@ class OneSignalService {
         },
         body: jsonEncode({
           'app_id': _appId,
-          // Semua device yang pernah login() dengan uid berperan admin akan
-          // ke-tag otomatis lewat OneSignal Data Tag (lihat catatan di bawah)
-          // — kalau belum setup tag, cara paling simpel: kirim ke semua subscriber
-          // (filtered_expression kosong = broadcast). Untuk skala tugas akhir
-          // dengan admin sedikit, broadcast biasanya cukup aman.
           'included_segments': ['Subscribed Users'],
           'headings': {'en': judul},
           'contents': {'en': pesan},
@@ -95,11 +79,9 @@ class OneSignalService {
       );
 
       if (response.statusCode >= 400) {
-        // ignore: avoid_print
         print('Gagal kirim push ke semua admin (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
-      // ignore: avoid_print
       print('Gagal kirim push ke semua admin: $e');
     }
   }

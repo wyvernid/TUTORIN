@@ -55,7 +55,6 @@ class _State extends State<RegisterTutorScreen> {
         role: 'tutor', usia: int.tryParse(_umur.text), keahlian: _keahlian, pengalaman: _pengalaman);
 
       // Upload CV & Portofolio setelah akun & dokumen Firestore-nya dibuat
-      // (butuh uid dari hasil register), lalu simpan URL-nya.
       final uid = user!.uid;
       final cvUrl = await _storage.uploadCvPdf(
           uid, 'cv_${DateTime.now().millisecondsSinceEpoch}.pdf', _cvFile!);
@@ -65,9 +64,6 @@ class _State extends State<RegisterTutorScreen> {
 
       if (!mounted) return;
       // AuthService.register() sudah mengirim email verifikasi & TIDAK
-      // logout user. Tutor baru harus verifikasi email DULU sebelum bisa
-      // melihat status verifikasi admin (TutorPendingScreen), jadi arahkan
-      // ke VerifyEmailScreen, bukan langsung ke TutorPendingScreen.
       Navigator.pushReplacement(context,
         MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: _email.text.trim())));
     } catch (e) {
@@ -187,9 +183,6 @@ class _State extends State<RegisterTutorScreen> {
     }
   }
 
-  // Chip custom — background putih solid + teks biru tua, dijamin kontras
-  // dan kelihatan di atas card biru (beda dengan Chip() Material3 bawaan
-  // yang sebelumnya bikin teks putih nyaris tak kelihatan di atas white24).
   Widget _chip(String label, VoidCallback onDelete) => Container(
     padding: const EdgeInsets.only(left: 10, right: 4, top: 5, bottom: 5),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),

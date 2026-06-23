@@ -7,7 +7,7 @@ class ChatService {
   final _db   = FirebaseFirestore.instance;
   final _notif = NotifikasiService();
 
-  // ── Tracker: uid siapa yang sedang AKTIF membuka chat room tertentu ──
+  //  Tracker uid siapa yang sedang aktif membuka chat room tertentu
   static final Map<String, String> _activeRooms = {};
 
   static void setActiveRoom(String roomId, String myUid) =>
@@ -30,14 +30,13 @@ class ChatService {
     required String receiverRole,
     required String text,
     String? fileUrl,
-    // 'image' | 'pdf' | null
     String? fileType,
   }) async {
     final rId     = roomId(senderUid, receiverUid);
     final roomRef = _db.collection('chatRooms').doc(rId);
     final batch   = _db.batch();
 
-    // ── Preview teks di daftar chat ──
+    // Preview teks di daftar chat
     String lastMsg = text;
     if (fileType == 'image') lastMsg = '[Gambar]';
     if (fileType == 'pdf')   lastMsg = '[Dokumen PDF]';
@@ -47,7 +46,7 @@ class ChatService {
       'senderNama': senderNama,
       'text':       text,
       'fileUrl':    fileUrl,
-      'fileType':   fileType,   // ← BARU
+      'fileType':   fileType,   
       'createdAt':  FieldValue.serverTimestamp(),
       'isRead':     false,
     });
@@ -67,7 +66,6 @@ class ChatService {
 
     await batch.commit();
 
-    // ── Hanya kirim push jika penerima TIDAK sedang aktif di room ini ──
     final receiverActiveInRoom = _activeRooms[rId] == receiverUid;
     if (!receiverActiveInRoom) {
       try {

@@ -8,7 +8,7 @@ class StorageService {
   final _picker   = ImagePicker();
   static const _bucket = 'tutorin-storage';
 
-  // ── Ambil gambar ──────────────────────────────────────────────────────────
+  //  Ambil gambar 
   Future<File?> ambilDariKamera() async {
     final p = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
     return p != null ? File(p.path) : null;
@@ -19,7 +19,7 @@ class StorageService {
     return p != null ? File(p.path) : null;
   }
 
-  // ── Ambil PDF ─────────────────────────────────────────────────────────────
+  //  Ambil PDF 
   Future<File?> ambilFilePdf() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -31,7 +31,7 @@ class StorageService {
     return null;
   }
 
-  // ── Upload ke Supabase Storage ────────────────────────────────────────────
+  //  Upload ke Supabase Storage 
   Future<String> _upload(String path, File file, {String contentType = 'image/jpeg'}) async {
     final bytes = await file.readAsBytes();
     await _supabase.storage.from(_bucket).uploadBinary(
@@ -58,7 +58,7 @@ class StorageService {
   Future<String> uploadCvPdf(String uid, String name, File f) =>
       _upload('cv/$uid/$name', f, contentType: 'application/pdf');
 
-  // ── Upload lampiran chat ──────────────────────────────────────────────────
+  //  Upload lampiran chat 
   /// Upload gambar dari chat. Path: chat/images/{timestamp}.jpg
   Future<String> uploadChatGambar(File f) {
     final ts = DateTime.now().millisecondsSinceEpoch;

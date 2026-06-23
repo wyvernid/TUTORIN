@@ -1,18 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Model 1 dokumen di collection Firestore `notifikasi`.
-/// Setiap notifikasi SELALU milik 1 user (field `uid`), termasuk notifikasi
-/// admin — kalau perlu broadcast ke semua admin, dibuat 1 dokumen per admin
-/// (lihat NotifikasiService.kirimKeSemuaAdmin) supaya status `isRead` tetap
-/// independen per orang.
+
 class NotifikasiModel {
   final String id;
   final String uid;       // UID penerima notifikasi
-  final String role;      // 'student' | 'tutor' | 'admin'
-  final String tipe;      // lihat NotifikasiTipe
+  final String role;     
+  final String tipe;      
   final String judul;
   final String pesan;
-  final String? refId;    // id booking/kelas/chat/laporan terkait (buat navigasi)
+  final String? refId;   // ID referensi terkait (misal: bookingId, kelasId, chatId, laporanId, tutorId)
   final String? refType;  // 'booking' | 'kelas' | 'chat' | 'laporan' | 'tutor'
   final bool isRead;
   final DateTime createdAt;
@@ -56,7 +52,6 @@ class NotifikasiModel {
       );
 }
 
-/// Konstanta tipe notifikasi — dipakai konsisten di service & UI (icon/warna).
 class NotifikasiTipe {
   static const bookingBaru = 'booking_baru';               // murid booking kelas → ke tutor
   static const bookingDikonfirmasi = 'booking_dikonfirmasi'; // tutor verifikasi bayar → ke murid

@@ -4,10 +4,6 @@ import '../../services/auth_service.dart';
 import '../tutor/tutor_home_screen.dart';
 import 'login_screen.dart';
 
-/// Halaman perantara untuk tutor yang:
-/// - baru register & belum diverifikasi admin (state: pending), atau
-/// - sudah ditolak admin (state: rejected) — bisa "Daftar Ulang" pakai
-///   akun yang sama tanpa harus bikin akun baru.
 class TutorPendingScreen extends StatefulWidget {
   const TutorPendingScreen({super.key});
   @override

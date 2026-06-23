@@ -45,10 +45,6 @@ class _State extends State<RegisterStudentScreen> {
         usia:     int.tryParse(_umur.text),
       );
 
-      // AuthService.register() otomatis sign-in user yang baru daftar dan
-      // mengirim email verifikasi. User TETAP dalam keadaan login (tidak
-      // logout lagi) supaya VerifyEmailScreen bisa cek status & kirim ulang
-      // tanpa perlu login manual dulu.
       if (!mounted) return;
 
       Navigator.pushReplacement(

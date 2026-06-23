@@ -34,9 +34,6 @@ class _State extends State<ForgotPasswordScreen> {
       } else if (msg.contains('too-many-requests')) {
         msg = 'Terlalu banyak percobaan, coba lagi nanti';
       } else if (msg.contains('user-not-found')) {
-        // Tetap tampilkan sukses generik walau email tidak terdaftar,
-        // supaya orang lain tidak bisa "mengecek" email mana yang
-        // terdaftar di sistem lewat fitur ini (security best practice).
         setState(() { _terkirim = true; _loading = false; });
         return;
       } else {

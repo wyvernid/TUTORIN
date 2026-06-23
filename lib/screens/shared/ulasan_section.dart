@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/ulasan_model.dart';
 import '../../services/kelas_service.dart';
 
-/// Menampilkan ringkasan rating + daftar ulasan untuk satu kelas,
-/// dengan filter berdasarkan jumlah bintang (1-5).
-/// Dipakai di halaman detail kelas student maupun tutor.
 class UlasanSection extends StatefulWidget {
   final String kelasId;
   final double ratingAvg;

@@ -43,8 +43,7 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // Sudah login tapi belum verifikasi email → tahan di halaman verifikasi,
-    // jangan biarkan masuk ke home manapun walau app baru dibuka ulang.
+    // Sudah login tapi belum verifikasi email
     try {
       final verified = await AuthService().reloadDanCekEmailVerified();
       if (!mounted) return;
@@ -56,18 +55,11 @@ class _SplashScreenState extends State<SplashScreen>
       debugPrint('SplashScreen email verify check error: $e');
     }
 
-    // Sudah login & terverifikasi → cek role dari Firestore
-    // Dibungkus try-catch supaya permission-denied tidak crash
+    // Sudah login & terverifikasi 
     try {
       final data = await AuthService().getUserData(user.uid);
       if (!mounted) return;
 
-      // Penting: ini menutup celah dimana user yang SUDAH LOGIN (sesi
-      // Firebase Auth masih aktif di device) kemudian disuspend admin.
-      // Tanpa cek ini, dia tetap bisa masuk lagi setiap buka app karena
-      // splash_screen sebelumnya hanya pernah cek role, tidak pernah
-      // cek isSuspended. Langsung signOut supaya sesi tidak nyangkut,
-      // lalu arahkan ke LoginScreen dengan pesan suspend.
       if (data?.isSuspended == true) {
         await AuthService().logout();
         if (!mounted) return;
@@ -78,8 +70,6 @@ class _SplashScreenState extends State<SplashScreen>
 
       switch (data?.role) {
         case 'tutor':
-          // Tutor yang belum diverifikasi admin tidak boleh masuk ke
-          // TutorHomeScreen — arahkan ke halaman menunggu verifikasi.
           if (data?.isVerified == true) {
             _goTo(const TutorHomeScreen());
           } else {
@@ -93,8 +83,6 @@ class _SplashScreenState extends State<SplashScreen>
           _goTo(const StudentHomeScreen());
       }
     } catch (e) {
-      // Firestore rules belum aktif / permission denied
-      // → tetap arahkan ke login supaya tidak stuck
       debugPrint('SplashScreen navigate error: $e');
       if (!mounted) return;
       _goTo(const LoginScreen());

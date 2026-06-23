@@ -39,9 +39,7 @@ class AuthService {
     await _db.collection('users').doc(cred.user!.uid).set(user.toMap());
     await cred.user!.sendEmailVerification();
 
-    // ── PENTING: daftarkan device ke OneSignal dengan uid ini ──
-    // Harus dipanggil setelah akun berhasil dibuat supaya push notification
-    // bisa diterima device ini dengan targetUid = uid Firestore.
+    // daftarkan device ke OneSignal dengan uid
     await OneSignalService.loginUser(cred.user!.uid);
 
     if (role == 'tutor') {
@@ -66,9 +64,6 @@ class AuthService {
     final cred =
         await _auth.signInWithEmailAndPassword(email: email, password: password);
 
-    // ── PENTING: hubungkan device ke uid setelah login berhasil ──
-    // Tanpa ini, OneSignal tidak tahu "device ini milik siapa" sehingga
-    // push notification yang ditarget lewat include_aliases selalu gagal.
     await OneSignalService.loginUser(cred.user!.uid);
 
     return getUserData(cred.user!.uid);
@@ -105,8 +100,6 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    // ── PENTING: putus hubungan device dari uid sebelum logout ──
-    // Supaya push notification tidak nyasar ke device setelah user ganti akun.
     await OneSignalService.logoutUser();
     await _auth.signOut();
   }

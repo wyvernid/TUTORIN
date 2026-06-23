@@ -2,31 +2,6 @@ import 'package:flutter/material.dart';
 import '../../services/notifikasi_service.dart';
 import 'notifikasi_list_screen.dart';
 
-/// Icon lonceng notifikasi + badge angka belum dibaca.
-///
-/// Punya 2 mode tampilan lewat parameter [circleBackground]:
-/// - `false` (default) → IconButton polos, dipasang di `actions: [...]` AppBar biasa.
-/// - `true`            → dibungkus lingkaran putih transparan, dipakai di
-///                        header custom (Container biru rounded) seperti di
-///                        Student/Tutor/Admin Beranda yang BUKAN AppBar.
-///
-/// Contoh pakai di AppBar:
-/// ```dart
-/// appBar: AppBar(
-///   title: const Text('TutorIn'),
-///   actions: [NotifikasiBadgeIcon(uid: myUid, role: 'student')],
-/// ),
-/// ```
-///
-/// Contoh pakai di header custom (lingkaran):
-/// ```dart
-/// NotifikasiBadgeIcon(
-///   uid: myUid,
-///   role: 'tutor',
-///   circleBackground: true,
-///   size: 44,
-/// ),
-/// ```
 class NotifikasiBadgeIcon extends StatelessWidget {
   final String uid;
   final String role; // 'student' | 'tutor' | 'admin'

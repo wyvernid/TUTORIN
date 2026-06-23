@@ -95,7 +95,7 @@ class _State extends State<TutorDetailScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-          // ── Header foto + nama ──
+          //  Header foto + nama 
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -127,7 +127,7 @@ class _State extends State<TutorDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ── Data diri ──
+          //  Data diri 
           _sectionTitle('Data Diri'),
           _infoCard([
             _infoRow(Icons.cake_outlined, 'Umur', t['usia'] != null ? '${t['usia']} tahun' : '-'),
@@ -136,7 +136,7 @@ class _State extends State<TutorDetailScreen> {
           ]),
           const SizedBox(height: 16),
 
-          // ── Keahlian ──
+          //  Keahlian 
           _sectionTitle('Keahlian'),
           _infoCard([
             keahlian.isEmpty
@@ -148,7 +148,7 @@ class _State extends State<TutorDetailScreen> {
           ]),
           const SizedBox(height: 16),
 
-          // ── Pengalaman ──
+          //  Pengalaman 
           _sectionTitle('Pengalaman'),
           _infoCard([
             pengalaman.isEmpty
@@ -164,7 +164,7 @@ class _State extends State<TutorDetailScreen> {
           ]),
           const SizedBox(height: 16),
 
-          // ── CV & Portofolio ──
+          //  CV & Portofolio 
           _sectionTitle('Dokumen Pendukung'),
           _infoCard([
             _dokumenRow(Icons.description_outlined, 'CV', t['cvUrl'],
@@ -184,7 +184,7 @@ class _State extends State<TutorDetailScreen> {
         ]),
       ),
 
-      // ── Tombol aksi, hanya muncul kalau belum verified ──
+      //  Tombol aksi, hanya muncul kalau belum verified 
       bottomNavigationBar: isVerified ? null : SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),

@@ -72,7 +72,7 @@ class _State extends State<TutorTambahKelasScreen> {
     super.dispose();
   }
 
-  // ── Jadwal ────────────────────────────────────────────────────────────────
+  // Jadwal
 
   void _tambahTanggal() async {
     final now = DateTime.now();
@@ -133,7 +133,7 @@ class _State extends State<TutorTambahKelasScreen> {
 
   void _hapusTanggal(int idx) => setState(() => _jadwalSesi.removeAt(idx));
 
-  // ── Simpan ────────────────────────────────────────────────────────────────
+  // Simpan
 
   void _save() async {
     final adaJamKosong = _jadwalSesi.any((j) => j.jamList.isEmpty);
@@ -203,7 +203,7 @@ class _State extends State<TutorTambahKelasScreen> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // Build 
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -233,7 +233,7 @@ class _State extends State<TutorTambahKelasScreen> {
           padding: const EdgeInsets.all(14),
           child: Column(children: [
 
-            // ── Card 1: Informasi Kelas ──────────────────────────────────
+            // Card 1: Informasi Kelas
             _card([
               const Text('Informasi Kelas',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
@@ -294,7 +294,7 @@ class _State extends State<TutorTambahKelasScreen> {
             ]),
             const SizedBox(height: 10),
 
-            // ── Card 2: Harga & Kuota ────────────────────────────────────
+            // Card 2: Harga & Kuota
             _card([
               const Text('Harga & Kuota',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
@@ -346,7 +346,7 @@ class _State extends State<TutorTambahKelasScreen> {
             ]),
             const SizedBox(height: 10),
 
-            // ── Card 3: Jadwal ───────────────────────────────────────────
+            // Card 3: Jadwal
             _card([
               Row(children: [
                 const Expanded(
@@ -451,7 +451,7 @@ class _State extends State<TutorTambahKelasScreen> {
             ]),
             const SizedBox(height: 10),
 
-            // ── Card 4: Mode & Lokasi ────────────────────────────────────
+            // Card 4: Mode & Lokasi
             _card([
               const Text('Mode & Lokasi',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
@@ -464,7 +464,7 @@ class _State extends State<TutorTambahKelasScreen> {
                 _modeBtn('keduanya', Icons.swap_horiz_rounded, 'Keduanya'),
               ]),
               
-              // ── Tampilkan ZOOM jika Mode Online / Keduanya ──
+              // Tampilkan ZOOM jika Mode Online / Keduanya
               if (_mode == 'online' || _mode == 'keduanya') ...[
                 const SizedBox(height: 16),
                 _f('Link Zoom / Meeting (opsional)', _zoomCtrl,
@@ -477,7 +477,7 @@ class _State extends State<TutorTambahKelasScreen> {
                 ),
               ],
 
-              // ── Tampilkan LOKASI jika Mode Offline / Keduanya ──
+              // Tampilkan LOKASI jika Mode Offline / Keduanya
               if (_mode != 'online') ...[
                 const SizedBox(height: 16),
                 _f('Alamat Lokasi', _loc,
@@ -519,7 +519,7 @@ class _State extends State<TutorTambahKelasScreen> {
         ),
       );
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // Helpers
 
   void _addTag() {
     final t = _tagCtrl.text.trim();

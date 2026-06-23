@@ -30,14 +30,10 @@ class NotifikasiService {
           ).toMap(),
         );
 
-    // Push notification asli — dipanggil "fire and forget" (tidak di-await
-    // dengan blocking), supaya kalau OneSignal lambat/gagal, proses utama
-    // (booking, approve, dll) tetap selesai duluan tanpa nunggu push.
+
     OneSignalService.kirimPush(targetUid: uid, judul: judul, pesan: pesan);
   }
 
-  /// Kirim notifikasi yang sama ke SEMUA admin sekaligus (mis. laporan baru).
-  /// Dibuat 1 dokumen terpisah per admin supaya status baca tiap admin independen.
   Future<void> kirimKeSemuaAdmin({
     required String tipe,
     required String judul,

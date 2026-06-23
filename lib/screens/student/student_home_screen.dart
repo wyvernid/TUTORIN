@@ -5,7 +5,6 @@ import 'student_chat_list_screen.dart';
 import 'student_profil_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
-  /// Set ke 1 untuk langsung buka tab Kelas, dst.
   final int initialIndex;
   const StudentHomeScreen({super.key, this.initialIndex = 0});
   @override

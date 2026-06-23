@@ -18,7 +18,6 @@ class KelasModel {
     this.tutorFotoUrl = "",
     required this.judul,
     required this.deskripsi,
-    // kategori DIHAPUS — digantikan sepenuhnya oleh tags
     required this.harga,
     required this.kuota,
     this.kuotaTerisi = 0,

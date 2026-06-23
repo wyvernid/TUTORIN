@@ -111,7 +111,6 @@ class _State extends State<AdminUserScreen> {
     ]));
 }
 
-/// Badge kecil yang menampilkan role pengguna (Student / Tutor).
 class _RoleBadge extends StatelessWidget {
   final String role;
   const _RoleBadge({required this.role});

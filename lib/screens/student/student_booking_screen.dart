@@ -33,7 +33,6 @@ class _State extends State<StudentBookingScreen> {
 
   bool get _isResuming => widget.existingBooking != null;
 
-  // ── BARU: getter aman, tidak akan pernah kosong saat resuming ──
   List<String> get _activeBookingIds {
     if (_isResuming) return [widget.existingBooking!.id];
     return _bookingIds;
@@ -46,7 +45,6 @@ class _State extends State<StudentBookingScreen> {
   void initState() {
     super.initState();
     if (_isResuming) {
-      // Tidak perlu add ke _bookingIds karena kita pakai _activeBookingIds
       _step = 2;
     }
     _loadTutorData();
@@ -62,7 +60,7 @@ class _State extends State<StudentBookingScreen> {
     }
   }
 
-  // ── Dates ─────────────────────────────────────────────────────────────────
+  //  Dates 
 
   List<Map<String, String>> get _dates {
     const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -112,7 +110,7 @@ class _State extends State<StudentBookingScreen> {
     return 'Rp$buf';
   }
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  //  Actions 
 
   Future<void> _createBooking() async {
     final me    = FirebaseAuth.instance.currentUser!;
@@ -314,7 +312,7 @@ class _State extends State<StudentBookingScreen> {
             ])));
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  //  Build 
 
   @override
   Widget build(BuildContext context) => PopScope(
@@ -733,7 +731,7 @@ class _State extends State<StudentBookingScreen> {
                             fontSize: 15, fontWeight: FontWeight.w700)))),
       ]));
 
-  // ── Widget helpers ────────────────────────────────────────────────────────
+  //  Widget helpers 
 
   Widget _stepIndicator(int current) =>
       Row(children: List.generate(3, (i) {
